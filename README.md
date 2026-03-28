@@ -142,20 +142,3 @@ cd samsung-health-sdk
 pip install -e ".[dev]"
 pytest
 ```
-
-### Releasing a new version
-
-Every push to `main` automatically bumps the **patch** version, builds, and publishes to PyPI via GitHub Actions.
-
-To release a **minor** or **major** bump instead, run the script locally before pushing:
-
-```bash
-python scripts/bump_version.py --minor   # 0.2.1 → 0.3.0
-python scripts/bump_version.py --major   # 0.2.1 → 1.0.0
-python scripts/bump_version.py --set 1.2.3  # explicit version
-```
-
-Then commit and push — the CI will pick up the already-bumped version and skip its own auto-bump.
-
-> **Note:** You must add a `PYPI_API_TOKEN` secret in your GitHub repository settings
-> (Settings → Secrets → Actions) for the publish step to work.
