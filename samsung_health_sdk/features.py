@@ -947,7 +947,55 @@ class HealthFeatureEngine:
         return df
 
     # ------------------------------------------------------------------
-    # 7. HTML report export
+    # 7. Daily heart-rate percentile statistics
+    # ------------------------------------------------------------------
+
+    def daily_hr_stats(
+        self,
+        start: DateLike = None,
+        end: DateLike = None,
+    ) -> pd.DataFrame:
+        """
+        Daily heart-rate percentile statistics.
+
+        Groups session-level HR measurements (≈1 hour each) by calendar day
+        and computes distribution metrics.  P5 captures resting/low-activity
+        periods; P95 captures peak-activity periods.
+
+        Returns
+        -------
+        DataFrame with columns:
+            date, n_sessions,
+            hr_p5, hr_p25, hr_median, hr_p75, hr_p95, hr_mean
+        """
+        hr = self._p.get_heart_rate(start, end, granularity="summary")
+        if hr.empty or "heart_rate" not in hr.columns:
+            return pd.DataFrame()
+
+        hr = hr.copy()
+        hr["date"] = self._local_date(hr["start_time"])
+        hr["heart_rate"] = pd.to_numeric(hr["heart_rate"], errors="coerce")
+        hr = hr.dropna(subset=["heart_rate"])
+
+        agg = (
+            hr.groupby("date")["heart_rate"]
+            .agg(n_sessions="count", hr_mean="mean", hr_median="median")
+            .reset_index()
+        )
+        pcts = (
+            hr.groupby("date")["heart_rate"]
+            .quantile([0.05, 0.25, 0.75, 0.95])
+            .unstack(level=-1)
+            .rename(columns={0.05: "hr_p5", 0.25: "hr_p25", 0.75: "hr_p75", 0.95: "hr_p95"})
+            .reset_index()
+        )
+        result = agg.merge(pcts, on="date")
+        for col in ["hr_mean", "hr_median", "hr_p5", "hr_p25", "hr_p75", "hr_p95"]:
+            result[col] = result[col].round(1)
+        return result.sort_values("date").reset_index(drop=True)
+
+    # ------------------------------------------------------------------
+    # 8. HTML report export
     # ------------------------------------------------------------------
 
     def export_report(

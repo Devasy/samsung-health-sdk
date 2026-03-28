@@ -149,6 +149,7 @@ class ReportBuilder:
         stress_sl   = self._safe(eng.stress_impact_on_sleep, start, end)
         activity    = self._safe(eng.daily_activity_profile, start, end)
         cardiac     = self._safe(eng.walking_cardiac_load,   start, end, source="auto")
+        hr_daily    = self._safe(eng.daily_hr_stats,         start, end)
 
         # Fix readiness baseline column to a known name
         if not readiness.empty:
@@ -186,6 +187,7 @@ class ReportBuilder:
             "activity":       _to_records(activity),
             "cardiac_bouts":  cardiac_bouts,
             "cardiac_rolling": cardiac_rolling,
+            "hr_daily":       _to_records(hr_daily),
         }
 
     @staticmethod

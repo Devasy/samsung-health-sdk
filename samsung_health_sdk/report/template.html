@@ -23,10 +23,20 @@ a{color:var(--blue);text-decoration:none}
 #app{max-width:1440px;margin:0 auto;padding:24px 20px 64px}
 
 .header{display:flex;justify-content:space-between;align-items:flex-end;
-  padding-bottom:20px;margin-bottom:24px;border-bottom:1px solid var(--border)}
+  padding-bottom:16px;margin-bottom:0;border-bottom:1px solid var(--border)}
 .header h1{font-size:20px;font-weight:700;letter-spacing:-.3px}
 .header .period{color:var(--muted);font-size:12px;margin-top:3px}
 .header .gen{color:var(--muted);font-size:11px}
+
+/* ── Tabs ── */
+.tab-nav{display:flex;gap:0;margin-bottom:24px;border-bottom:1px solid var(--border)}
+.tab-btn{background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);
+  font-size:13px;font-weight:500;padding:12px 18px;cursor:pointer;
+  margin-bottom:-1px;transition:color .15s,border-color .15s;letter-spacing:.01px}
+.tab-btn.active{color:var(--blue);border-bottom-color:var(--blue)}
+.tab-btn:hover:not(.active){color:var(--text)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
 
 /* ── KPI Cards ── */
 .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
@@ -39,13 +49,16 @@ a{color:var(--blue);text-decoration:none}
 .k-green .kpi-val{color:var(--green)}
 .k-purple .kpi-val{color:var(--purple)}
 .k-orange .kpi-val{color:var(--orange)}
+.k-red .kpi-val{color:var(--red)}
+.k-teal .kpi-val{color:var(--teal)}
 
 /* ── Dashboard Grid ── */
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .card{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:18px 16px}
 .card.full{grid-column:1/-1}
+.card-title-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
 .card-title{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;
-  letter-spacing:.5px;margin-bottom:4px;padding-left:10px;
+  letter-spacing:.5px;padding-left:10px;
   border-left:2px solid var(--blue-d)}
 .card-sub{font-size:11px;color:var(--muted2);margin-bottom:10px;padding-left:12px}
 .chart{width:100%}
@@ -53,6 +66,30 @@ a{color:var(--blue);text-decoration:none}
 .h320{height:320px}.h360{height:360px}.h400{height:400px}
 .empty{display:flex;align-items:center;justify-content:center;
   height:100%;color:var(--muted);font-size:12px;font-style:italic}
+
+/* ── Chart description ── */
+.chart-desc{font-size:11px;color:var(--muted2);padding:7px 12px 0;
+  line-height:1.6;border-left:1px solid var(--border);margin-top:8px}
+
+/* ── Toggle button (activity % view) ── */
+.toggle-btn{background:var(--surf2);border:1px solid var(--border);color:var(--muted);
+  font-size:10px;font-weight:500;padding:3px 9px;border-radius:5px;cursor:pointer;
+  letter-spacing:.2px;transition:background .15s,color .15s,border-color .15s}
+.toggle-btn.on{background:var(--blue-d);color:#fff;border-color:var(--blue-d)}
+
+/* ── Time-frame selector (HR tab) ── */
+.tf-row{display:flex;gap:6px;margin-bottom:14px;align-items:center;flex-wrap:wrap}
+.tf-label{font-size:11px;color:var(--muted);margin-right:4px}
+.tf-btn{background:var(--surf2);border:1px solid var(--border);color:var(--muted);
+  font-size:11px;font-weight:500;padding:4px 12px;border-radius:6px;cursor:pointer;
+  transition:background .15s,color .15s,border-color .15s}
+.tf-btn.active{background:var(--blue-d);color:#fff;border-color:var(--blue-d)}
+.tf-custom{display:none;gap:6px;align-items:center}
+.tf-custom.show{display:flex}
+.tf-custom label{font-size:11px;color:var(--muted)}
+.tf-custom input[type=date]{background:var(--surf2);border:1px solid var(--border);
+  color:var(--text);font-size:11px;padding:3px 8px;border-radius:5px;
+  color-scheme:dark}
 
 /* ── Footer ── */
 footer{text-align:center;color:var(--muted);font-size:11px;
@@ -69,6 +106,17 @@ footer{text-align:center;color:var(--muted);font-size:11px;
   </div>
   <span class="gen" id="p-gen"></span>
 </header>
+
+<!-- ── Tab Navigation ── -->
+<nav class="tab-nav">
+  <button class="tab-btn active" id="tb-overview" onclick="switchTab('overview')">Overview</button>
+  <button class="tab-btn" id="tb-hr" onclick="switchTab('hr')">&#9829; Heart Rate</button>
+</nav>
+
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<!-- OVERVIEW TAB                                                        -->
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<div id="tab-overview" class="tab-panel active">
 
 <div class="kpi-row">
   <div class="kpi k-blue">
@@ -100,6 +148,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;
     <div class="card-title">Sleep</div>
     <div class="card-sub">Stage breakdown per night · quality &amp; efficiency overlay</div>
     <div id="c-sleep" class="chart h320"></div>
+    <p class="chart-desc">Stacked bars show nightly minutes in each sleep stage. The blue <strong>Quality</strong> line (right axis, 0–100) is a composite score weighted toward deep and REM sleep. Taller deep/REM segments and a high quality line indicate more restorative sleep. Use the slider below to pan across the full history.</p>
   </div>
 
   <!-- 2. Efficiency & Fragmentation -->
@@ -107,6 +156,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;
     <div class="card-title">Sleep Quality Detail</div>
     <div class="card-sub">Efficiency % · fragmentation index</div>
     <div id="c-eff" class="chart h280"></div>
+    <p class="chart-desc"><strong>Efficiency %</strong> (green) is actual sleep time ÷ total time in bed — the dashed target line is 85%. <strong>Fragmentation index</strong> (yellow bars) counts Awake transitions per sleep hour; a lower bar means fewer interruptions and more consolidated sleep.</p>
   </div>
 
   <!-- 3. Stress → Sleep scatter -->
@@ -114,6 +164,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;
     <div class="card-title">Stress Impact on Sleep</div>
     <div class="card-sub">Prev-day stress deviation vs that night's sleep quality</div>
     <div id="c-stress-sleep" class="chart h280"></div>
+    <p class="chart-desc">Each dot is one night. The X-axis shows how far your previous-day stress was above (right) or below (left) your personal rolling baseline — so chronically stressed people are not penalised unfairly. Green dots cluster on the left (low-stress days), red dots on the right (high-stress days). A downward slope suggests stress is costing sleep quality.</p>
   </div>
 
   <!-- 4. HRV Readiness -->
@@ -121,13 +172,18 @@ footer{text-align:center;color:var(--muted);font-size:11px;
     <div class="card-title">HRV Readiness</div>
     <div class="card-sub">RMSSD vs 14-day baseline · readiness score · low-readiness nights flagged</div>
     <div id="c-readiness" class="chart h300"></div>
+    <p class="chart-desc">The green line is your nightly sleep <strong>RMSSD</strong> (heart-rate variability in ms) — higher and stable is better. The dashed grey line is your rolling 14-day personal baseline. The blue <strong>Readiness score</strong> (right axis) is 50 when at baseline; red triangles mark nights where RMSSD dropped &gt;15% below baseline, signalling that lighter training or extra rest is advisable.</p>
   </div>
 
-  <!-- 5. Daily Activity -->
+  <!-- 5. Daily Activity Profile -->
   <div class="card full">
-    <div class="card-title">Daily Activity Profile</div>
+    <div class="card-title-row">
+      <div class="card-title">Daily Activity Profile</div>
+      <button class="toggle-btn" id="act-pct-btn" onclick="toggleActivityPct()">% View</button>
+    </div>
     <div class="card-sub">Intensity buckets per day · HR during active minutes</div>
     <div id="c-activity" class="chart h360"></div>
+    <p class="chart-desc">Stacked bars show daily minutes in each activity tier (Sedentary → Vigorous). The red <strong>Active HR</strong> line (right axis) tracks average heart rate during active minutes. Toggle <em>% View</em> to see each tier as a share of total tracked minutes, making cross-day comparisons easier regardless of total wear time. More time in Moderate/Vigorous tiers with a gradually decreasing Active HR over weeks indicates improving aerobic fitness.</p>
   </div>
 
   <!-- 6. Cardiac Load -->
@@ -135,6 +191,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;
     <div class="card-title">Walking Cardiac Load</div>
     <div class="card-sub">HR ÷ speed per walking bout · 4-week rolling average · lower = more aerobically efficient</div>
     <div id="c-cardiac" class="chart h300"></div>
+    <p class="chart-desc"><strong>Cardiac Load</strong> = mean HR ÷ walking speed (bpm·s/m). A lower value means your heart works less hard at the same pace — a sign of improving aerobic efficiency over time. The orange rolling average smooths week-to-week variation to reveal the long-term trend. Scatter colours show the data source: Pedometer (GPS speed), Movement (accelerometer-calibrated), Exercise (session summaries).</p>
   </div>
 
   <!-- 7. Nightly Physiology: RR + Restlessness -->
@@ -142,9 +199,76 @@ footer{text-align:center;color:var(--muted);font-size:11px;
     <div class="card-title">Nightly Physiology</div>
     <div class="card-sub">Respiratory rate during sleep · restless minutes · HRV suppression nights flagged</div>
     <div id="c-physio" class="chart h260"></div>
+    <p class="chart-desc">The teal line shows average <strong>respiratory rate</strong> (breaths/min) recorded during sleep — normal adults range 12–20; values outside this range during sleep may warrant attention. Yellow bars indicate <strong>restless minutes</strong> (movement detected while nominally asleep). Diamond markers flag nights where HRV was significantly suppressed; clusters of high RR + restlessness + suppressed HRV often precede illness or recovery debt.</p>
   </div>
 
 </div><!-- /grid -->
+</div><!-- /tab-overview -->
+
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<!-- HEART RATE TAB                                                      -->
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<div id="tab-hr" class="tab-panel">
+
+<div class="kpi-row">
+  <div class="kpi k-green">
+    <div class="kpi-label">Avg Resting HR (P5)</div>
+    <div class="kpi-val" id="kv-hr-rest">--</div>
+    <div class="kpi-sub">bpm · daily 5th percentile</div>
+  </div>
+  <div class="kpi k-blue">
+    <div class="kpi-label">Avg Median HR</div>
+    <div class="kpi-val" id="kv-hr-med">--</div>
+    <div class="kpi-sub">bpm · daily median</div>
+  </div>
+  <div class="kpi k-red">
+    <div class="kpi-label">Avg Peak HR (P95)</div>
+    <div class="kpi-val" id="kv-hr-peak">--</div>
+    <div class="kpi-sub">bpm · daily 95th percentile</div>
+  </div>
+  <div class="kpi k-teal">
+    <div class="kpi-label">HR Range (P5→P95)</div>
+    <div class="kpi-val" id="kv-hr-range">--</div>
+    <div class="kpi-sub">bpm avg daily spread</div>
+  </div>
+</div>
+
+<!-- Time-frame selector -->
+<div class="tf-row">
+  <span class="tf-label">Time frame:</span>
+  <button class="tf-btn" data-tf="1W" onclick="updateHRCharts('1W')">1 Week</button>
+  <button class="tf-btn" data-tf="1M" onclick="updateHRCharts('1M')">1 Month</button>
+  <button class="tf-btn active" data-tf="3M" onclick="updateHRCharts('3M')">3 Months</button>
+  <button class="tf-btn" data-tf="1Y" onclick="updateHRCharts('1Y')">1 Year</button>
+  <button class="tf-btn" data-tf="ALL" onclick="updateHRCharts('ALL')">All</button>
+  <button class="tf-btn" data-tf="custom" onclick="updateHRCharts('custom')">Custom</button>
+  <div class="tf-custom" id="tf-custom-row">
+    <label>From <input type="date" id="tf-from"></label>
+    <label>To <input type="date" id="tf-to"></label>
+    <button class="tf-btn active" onclick="applyCustomTF()">Apply</button>
+  </div>
+</div>
+
+<div class="grid">
+
+  <!-- HR P5-P95 band chart -->
+  <div class="card full">
+    <div class="card-title">Daily HR Distribution (P5 · P25 · Median · P75 · P95)</div>
+    <div class="card-sub">Heart-rate percentile band · smoothing adapts to selected time frame</div>
+    <div id="c-hr-band" class="chart h360"></div>
+    <p class="chart-desc"><strong>P5</strong> (green dashed) represents your lowest-intensity hours of the day — a proxy for resting heart rate. <strong>P95</strong> (orange dashed) captures your daily peak-exertion moments. The shaded blue band is the P5–P95 range; a narrower band on rest days and a wider band on active days is normal. The red <strong>Median</strong> line shows where half your daily readings fall. A gradual downward drift in P5/Median over months indicates improving cardiovascular fitness.</p>
+  </div>
+
+  <!-- HR-RR Correlation -->
+  <div class="card full">
+    <div class="card-title">HR ↔ Respiratory Rate Correlation</div>
+    <div class="card-sub">Daily median HR vs nightly respiratory rate · coloured by month</div>
+    <div id="c-hr-rr" class="chart h320"></div>
+    <p class="chart-desc">Each dot pairs the <strong>daily median heart rate</strong> with the <strong>nightly respiratory rate</strong> recorded during the following sleep session. A positive correlation (cluster rising left-to-right) is typical — higher daytime HR often reflects activity or stress that also elevates breathing rate during sleep. Outliers (very high RR at normal HR) may indicate respiratory illness or allergies independent of cardiovascular load. Colours differentiate calendar months so you can spot seasonal patterns.</p>
+  </div>
+
+</div><!-- /grid -->
+</div><!-- /tab-hr -->
 
 <footer>
   Generated by <strong>samsung-health-sdk</strong> &mdash;
@@ -191,8 +315,36 @@ function noData(id) {
   if (el) el.innerHTML = '<div class="empty">No data available for this period</div>';
 }
 
+// Simple trailing rolling average over an array of values (nulls preserved)
+function rollingAvg(vals, n) {
+  return vals.map((v, i) => {
+    if (v == null) return null;
+    const slice = vals.slice(Math.max(0, i - n + 1), i + 1).filter(x => x != null);
+    return slice.length ? slice.reduce((a, b) => a + b, 0) / slice.length : null;
+  });
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
-// KPI Cards
+// Tab switching
+// ─────────────────────────────────────────────────────────────────────────────
+
+let hrTabInit = false;
+
+function switchTab(name) {
+  ['overview', 'hr'].forEach(t => {
+    const panel = document.getElementById('tab-' + t);
+    const btn   = document.getElementById('tb-' + t);
+    if (panel) panel.classList.toggle('active', t === name);
+    if (btn)   btn.classList.toggle('active', t === name);
+  });
+  if (name === 'hr' && !hrTabInit) {
+    hrTabInit = true;
+    _initHRTab();
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// KPI Cards — Overview
 // ─────────────────────────────────────────────────────────────────────────────
 
 const m = D.meta;
@@ -437,12 +589,60 @@ const GRID = { left: 8, right: 8, top: 44, bottom: 50, containLabel: true };
 })();
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Chart 5 — Daily Activity Profile
+// Chart 5 — Daily Activity Profile  (supports absolute ↔ % toggle)
 // ─────────────────────────────────────────────────────────────────────────────
+
+let activityChart = null;
+let activityPct = false;
+
+const ACT_KEYS   = ['sedentary_min', 'light_min', 'low_mod_min', 'moderate_min', 'vigorous_min'];
+const ACT_NAMES  = ['Sedentary', 'Light', 'Low-Mod', 'Moderate', 'Vigorous'];
+const ACT_COLORS = ['#1e293b', '#164e63', '#065f46', '#15803d', '#4ade80'];
+
+// Pre-compute daily totals for % mode
+const actTotals = {};
+D.activity.forEach(r => {
+  actTotals[r.date] = ACT_KEYS.reduce((s, k) => s + (r[k] || 0), 0);
+});
+
+function buildActSeries(pct) {
+  return ACT_KEYS.map((key, i) => ({
+    name: ACT_NAMES[i],
+    type: 'bar',
+    stack: 'act',
+    data: D.activity.filter(r => r[key] != null).map(r => {
+      const val = r[key];
+      const v   = pct && actTotals[r.date] > 0 ? (val / actTotals[r.date]) * 100 : val;
+      return [r.date, +v.toFixed(1)];
+    }),
+    itemStyle: { color: ACT_COLORS[i] }
+  }));
+}
+
+function toggleActivityPct() {
+  activityPct = !activityPct;
+  const btn = document.getElementById('act-pct-btn');
+  if (btn) btn.classList.toggle('on', activityPct);
+
+  if (!activityChart) return;
+  activityChart.setOption({
+    yAxis: [
+      yAx(activityPct ? 'Share (%)' : 'Minutes',
+          activityPct ? { min: 0, max: 100 } : { min: 0 }),
+      yAx('HR (bpm)', { min: 40, max: 180, splitLine: { show: false }, position: 'right' })
+    ],
+    series: [
+      ...buildActSeries(activityPct),
+      { name: 'Active HR', type: 'line', yAxisIndex: 1, smooth: true,
+        data: pluck(D.activity, 'mean_hr_active'),
+        itemStyle: { color: '#f87171' }, lineStyle: { width: 1.8 }, symbol: 'none' }
+    ]
+  }, { replaceMerge: ['series', 'yAxis'] });
+}
 
 (function () {
   if (!D.activity.length) { noData('c-activity'); return; }
-  initChart('c-activity', {
+  activityChart = initChart('c-activity', {
     backgroundColor: 'transparent',
     tooltip: {
       ...TIP, trigger: 'axis',
@@ -450,8 +650,8 @@ const GRID = { left: 8, right: 8, top: 44, bottom: 50, containLabel: true };
         let s = '<b>' + params[0].axisValueLabel + '</b><br>';
         params.forEach(p => {
           if (p.value[1] == null) return;
-          const unit = p.seriesName === 'Active HR' ? ' bpm' : ' min';
-          s += p.marker + p.seriesName + ': ' + (+p.value[1]).toFixed(0) + unit + '<br>';
+          const unit = p.seriesName === 'Active HR' ? ' bpm' : (activityPct ? '%' : ' min');
+          s += p.marker + p.seriesName + ': ' + (+p.value[1]).toFixed(1) + unit + '<br>';
         });
         return s;
       }
@@ -465,16 +665,7 @@ const GRID = { left: 8, right: 8, top: 44, bottom: 50, containLabel: true };
       yAx('HR (bpm)', { min: 40, max: 180, splitLine: { show: false }, position: 'right' })
     ],
     series: [
-      { name: 'Sedentary', type: 'bar', stack: 'act', data: pluck(D.activity, 'sedentary_min'),
-        itemStyle: { color: '#1e293b' } },
-      { name: 'Light',     type: 'bar', stack: 'act', data: pluck(D.activity, 'light_min'),
-        itemStyle: { color: '#164e63' } },
-      { name: 'Low-Mod',   type: 'bar', stack: 'act', data: pluck(D.activity, 'low_mod_min'),
-        itemStyle: { color: '#065f46' } },
-      { name: 'Moderate',  type: 'bar', stack: 'act', data: pluck(D.activity, 'moderate_min'),
-        itemStyle: { color: '#15803d' } },
-      { name: 'Vigorous',  type: 'bar', stack: 'act', data: pluck(D.activity, 'vigorous_min'),
-        itemStyle: { color: '#4ade80' } },
+      ...buildActSeries(false),
       { name: 'Active HR', type: 'line', yAxisIndex: 1, smooth: true,
         data: pluck(D.activity, 'mean_hr_active'),
         itemStyle: { color: '#f87171' }, lineStyle: { width: 1.8 }, symbol: 'none' }
@@ -575,6 +766,246 @@ const GRID = { left: 8, right: 8, top: 44, bottom: 50, containLabel: true };
     ]
   });
 })();
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Heart Rate Tab — state & helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+const HR = D.hr_daily || [];
+let currentTF = '3M';
+
+// Month colours for HR-RR scatter
+const MONTH_COLORS = [
+  '#60a5fa','#34d399','#f87171','#fbbf24','#a78bfa','#2dd4bf',
+  '#f97316','#818cf8','#fb7185','#4ade80','#38bdf8','#e879f9'
+];
+
+function filterHRData(tf) {
+  if (!HR.length) return [];
+  if (tf === 'ALL') return HR;
+  if (tf === 'custom') {
+    const from = document.getElementById('tf-from').value;
+    const to   = document.getElementById('tf-to').value;
+    if (!from || !to) return HR;
+    return HR.filter(r => r.date >= from && r.date <= to);
+  }
+  const last = HR[HR.length - 1].date;
+  const end  = new Date(last);
+  const start = new Date(last);
+  if (tf === '1W') start.setDate(start.getDate() - 7);
+  else if (tf === '1M') start.setMonth(start.getMonth() - 1);
+  else if (tf === '3M') start.setMonth(start.getMonth() - 3);
+  else if (tf === '1Y') start.setFullYear(start.getFullYear() - 1);
+  const startStr = start.toISOString().slice(0, 10);
+  const endStr   = end.toISOString().slice(0, 10);
+  return HR.filter(r => r.date >= startStr && r.date <= endStr);
+}
+
+function applyCustomTF() { updateHRCharts('custom'); }
+
+function updateHRCharts(tf) {
+  currentTF = tf;
+  document.querySelectorAll('.tf-btn[data-tf]').forEach(b =>
+    b.classList.toggle('active', b.dataset.tf === tf));
+  const customRow = document.getElementById('tf-custom-row');
+  if (customRow) customRow.classList.toggle('show', tf === 'custom');
+  if (tf === 'custom') return; // wait for Apply
+
+  const data = filterHRData(tf);
+  _drawHRBand(data, tf);
+  _drawHRRR(data);
+}
+
+function _initHRTab() {
+  // KPI cards (full dataset)
+  if (HR.length) {
+    set('kv-hr-rest',  fmt0(avg(HR, 'hr_p5')));
+    set('kv-hr-med',   fmt0(avg(HR, 'hr_median')));
+    set('kv-hr-peak',  fmt0(avg(HR, 'hr_p95')));
+    const spread = avg(HR.map(r =>
+      r.hr_p95 != null && r.hr_p5 != null ? { v: r.hr_p95 - r.hr_p5 } : {}), 'v');
+    set('kv-hr-range', fmt0(spread));
+  }
+  updateHRCharts('3M');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HR Band Chart (P5 · P25 · Median · P75 · P95)
+// ─────────────────────────────────────────────────────────────────────────────
+
+let hrBandChart = null;
+
+function _drawHRBand(data, tf) {
+  const el = document.getElementById('c-hr-band');
+  if (!el) return;
+  if (!data.length) { noData('c-hr-band'); return; }
+
+  // Determine smoothing window based on period length
+  const n = data.length;
+  const rollN = n > 180 ? 7 : n > 60 ? 3 : 1;
+  const isSmooth = n > 14;
+
+  const dates  = data.map(r => r.date);
+  const rawP5  = data.map(r => r.hr_p5);
+  const rawP25 = data.map(r => r.hr_p25);
+  const rawMed = data.map(r => r.hr_median);
+  const rawP75 = data.map(r => r.hr_p75);
+  const rawP95 = data.map(r => r.hr_p95);
+
+  const p5  = rollN > 1 ? rollingAvg(rawP5,  rollN) : rawP5;
+  const p25 = rollN > 1 ? rollingAvg(rawP25, rollN) : rawP25;
+  const med = rollN > 1 ? rollingAvg(rawMed, rollN) : rawMed;
+  const p75 = rollN > 1 ? rollingAvg(rawP75, rollN) : rawP75;
+  const p95 = rollN > 1 ? rollingAvg(rawP95, rollN) : rawP95;
+
+  // Lookup maps for tooltip (original values)
+  const origP5  = {}, origMed = {}, origP95 = {};
+  data.forEach(r => { origP5[r.date]=r.hr_p5; origMed[r.date]=r.hr_median; origP95[r.date]=r.hr_p95; });
+
+  // Band series: invisible baseline (p5) + delta (p95-p5) stacked on top
+  const bandBase  = dates.map((d, i) => [d, p5[i]]);
+  const bandDelta = dates.map((d, i) =>
+    p5[i] != null && p95[i] != null ? [d, +(p95[i] - p5[i]).toFixed(1)] : [d, null]);
+
+  const opts = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      ...TIP, trigger: 'axis',
+      formatter: function (params) {
+        const date = params[0] ? params[0].axisValue : '';
+        return '<b>' + date + '</b><br>' +
+          '<span style="color:#f97316">P95: ' + (origP95[date] != null ? origP95[date].toFixed(0) : '--') + ' bpm</span><br>' +
+          '<span style="color:#f87171">Median: ' + (origMed[date] != null ? origMed[date].toFixed(0) : '--') + ' bpm</span><br>' +
+          '<span style="color:#34d399">P5: ' + (origP5[date] != null ? origP5[date].toFixed(0) : '--') + ' bpm</span>';
+      }
+    },
+    legend: {
+      textStyle: { color: '#94a3b8' }, top: 6, itemWidth: 12,
+      data: ['P5 (low)', 'P25', 'Median HR', 'P75', 'P95 (high)']
+    },
+    grid: { left: 8, right: 8, top: 44, bottom: 50, containLabel: true },
+    dataZoom: n > 90 ? DZ : [{ type: 'inside', throttle: 50 }],
+    xAxis: { type: 'category', data: dates,
+      axisLabel: { color: '#64748b', fontSize: 10,
+        interval: Math.max(0, Math.floor(n / 12) - 1),
+        formatter: v => { const d = new Date(v); return (d.getMonth()+1)+'/'+d.getDate(); } },
+      axisLine: { lineStyle: { color: '#1e2d45' } },
+      splitLine: { show: false } },
+    yAxis: yAx('Heart Rate (bpm)', { min: 'dataMin', max: 'dataMax',
+      axisLabel: { color: '#64748b', fontSize: 11,
+        formatter: v => v + ' bpm' } }),
+    series: [
+      // ── Band fill: invisible base + shaded delta ──
+      { name: 'band_base', type: 'line', data: bandBase, stack: 'hrband',
+        lineStyle: { opacity: 0 }, areaStyle: { color: 'transparent' },
+        symbol: 'none', legendHoverLink: false, silent: true,
+        tooltip: { show: false } },
+      { name: 'P5–P95 Band', type: 'line', data: bandDelta, stack: 'hrband',
+        lineStyle: { opacity: 0 },
+        areaStyle: { color: 'rgba(96,165,250,0.15)' },
+        symbol: 'none', legendHoverLink: false, silent: true,
+        tooltip: { show: false } },
+      // ── Percentile lines ──
+      { name: 'P5 (low)', type: 'line', smooth: isSmooth,
+        data: dates.map((d, i) => [d, p5[i]]),
+        itemStyle: { color: '#34d399' }, lineStyle: { width: 1.5, type: 'dashed' },
+        symbol: 'none' },
+      { name: 'P25', type: 'line', smooth: isSmooth,
+        data: dates.map((d, i) => [d, p25[i]]),
+        itemStyle: { color: '#60a5fa' }, lineStyle: { width: 1, type: 'dotted' },
+        symbol: 'none', opacity: 0.6 },
+      { name: 'Median HR', type: 'line', smooth: isSmooth,
+        data: dates.map((d, i) => [d, med[i]]),
+        itemStyle: { color: '#f87171' }, lineStyle: { width: 2.5 },
+        symbol: n <= 30 ? 'circle' : 'none', symbolSize: 4 },
+      { name: 'P75', type: 'line', smooth: isSmooth,
+        data: dates.map((d, i) => [d, p75[i]]),
+        itemStyle: { color: '#60a5fa' }, lineStyle: { width: 1, type: 'dotted' },
+        symbol: 'none', opacity: 0.6 },
+      { name: 'P95 (high)', type: 'line', smooth: isSmooth,
+        data: dates.map((d, i) => [d, p95[i]]),
+        itemStyle: { color: '#f97316' }, lineStyle: { width: 1.5, type: 'dashed' },
+        symbol: 'none' }
+    ]
+  };
+
+  if (!hrBandChart) {
+    hrBandChart = echarts.init(el, null, { renderer: 'svg' });
+    window.addEventListener('resize', () => hrBandChart.resize());
+  }
+  hrBandChart.setOption(opts, true);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HR ↔ Respiratory Rate Correlation Scatter
+// ─────────────────────────────────────────────────────────────────────────────
+
+let hrRRChart = null;
+
+function _drawHRRR(data) {
+  const el = document.getElementById('c-hr-rr');
+  if (!el) return;
+
+  // Build HR median map from filtered data
+  const hrMap = {};
+  data.forEach(r => { if (r.hr_median != null) hrMap[r.date] = r.hr_median; });
+
+  // Join with physiology (use all physiology — the HR data is already filtered by TF)
+  const corr = (D.physiology || []).filter(r => r.rr_mean && hrMap[r.date]);
+  if (!corr.length) { noData('c-hr-rr'); return; }
+
+  // Group by month for colour
+  const byMonth = {};
+  corr.forEach(r => {
+    const mo = r.date.slice(0, 7); // YYYY-MM
+    if (!byMonth[mo]) byMonth[mo] = [];
+    byMonth[mo].push({ value: [hrMap[r.date], r.rr_mean, r.date], name: r.date });
+  });
+
+  const months = Object.keys(byMonth).sort();
+  const series = months.map((mo, i) => ({
+    name: mo,
+    type: 'scatter',
+    data: byMonth[mo],
+    symbolSize: 7,
+    itemStyle: { color: MONTH_COLORS[i % MONTH_COLORS.length], opacity: 0.75 }
+  }));
+
+  const opts = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      ...TIP, trigger: 'item',
+      formatter: p => '<b>' + p.data.name + '</b><br>' +
+        'Median HR: ' + p.value[0].toFixed(0) + ' bpm<br>' +
+        'Nightly RR: ' + p.value[1].toFixed(1) + ' br/min'
+    },
+    legend: { textStyle: { color: '#94a3b8' }, top: 6, itemWidth: 10, itemHeight: 10,
+      type: 'scroll', pageTextStyle: { color: '#64748b' } },
+    grid: { left: 8, right: 8, top: 44, bottom: 44, containLabel: true },
+    xAxis: {
+      name: 'Daily Median HR (bpm)',
+      nameTextStyle: { color: '#64748b', fontSize: 10 }, nameLocation: 'middle', nameGap: 28,
+      axisLabel: { color: '#64748b', fontSize: 11 },
+      axisLine: { lineStyle: { color: '#1e2d45' } },
+      splitLine: { lineStyle: { color: '#1e2d45', type: 'dashed' } },
+      type: 'value'
+    },
+    yAxis: yAx('Nightly Resp. Rate (br/min)', {}),
+    series
+  };
+
+  if (!hrRRChart) {
+    hrRRChart = echarts.init(el, null, { renderer: 'svg' });
+    window.addEventListener('resize', () => hrRRChart.resize());
+  }
+  hrRRChart.setOption(opts, true);
+}
+
+// Expose onclick-called functions to global scope
+window.switchTab        = switchTab;
+window.toggleActivityPct = toggleActivityPct;
+window.updateHRCharts   = updateHRCharts;
+window.applyCustomTF    = applyCustomTF;
 
 })(); // end IIFE
 </script>
