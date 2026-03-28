@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "samsung-health-sdk"
+version = "0.2.0"
+description = "Parse and analyse Samsung Health export data as pandas DataFrames"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+keywords = ["samsung", "health", "wearable", "pandas", "data", "fitness"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+]
+dependencies = [
+    "pandas>=2.0",
+    "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "pytest-cov", "black", "ruff"]
+
+[project.urls]
+Repository = "https://github.com/Devasy/samsung-health-sdk"
+Issues = "https://github.com/Devasy/samsung-health-sdk/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["samsung_health_sdk*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.black]
+line-length = 100
+target-version = ["py39"]

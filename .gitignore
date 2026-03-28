@@ -1,0 +1,9 @@
+venv/
+__pycache__/
+samsunghealth_*/*
+*.zip
+*.rar
+archive/
+dist/
+build/
+*.egg-info/
