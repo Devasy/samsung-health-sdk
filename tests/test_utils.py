@@ -1,11 +1,9 @@
 """Smoke tests for samsung-health-sdk utilities."""
 
 import datetime
-import math
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from samsung_health_sdk.utils import filter_date_range
 from samsung_health_sdk.report.builder import _Enc
@@ -14,11 +12,14 @@ import json
 
 # ── filter_date_range ──────────────────────────────────────────────────────
 
+
 def _make_df(dates):
-    return pd.DataFrame({
-        "start_time": pd.to_datetime(dates, utc=True),
-        "value": range(len(dates)),
-    })
+    return pd.DataFrame(
+        {
+            "start_time": pd.to_datetime(dates, utc=True),
+            "value": range(len(dates)),
+        }
+    )
 
 
 def test_filter_date_range_no_bounds():
@@ -51,6 +52,7 @@ def test_filter_date_range_empty_df():
 
 # ── JSON encoder ───────────────────────────────────────────────────────────
 
+
 def test_enc_numpy_int():
     assert json.dumps(np.int64(42), cls=_Enc) == "42"
 
@@ -71,6 +73,7 @@ def test_enc_numpy_bool():
 def test_enc_nan_via_dataframe():
     """NaN values in float columns become None (null) after JSON round-trip."""
     from samsung_health_sdk.report.builder import _to_records
+
     df = pd.DataFrame({"date": ["2024-01-01"], "val": pd.array([pd.NA], dtype="Float64")})
     records = _to_records(df)
     assert records[0]["val"] is None
@@ -79,6 +82,7 @@ def test_enc_nan_via_dataframe():
 def test_enc_dataframe_roundtrip():
     """_to_records produces JSON-safe dicts for normal numeric data."""
     from samsung_health_sdk.report.builder import _to_records
+
     df = pd.DataFrame({"date": ["2024-01-01", "2024-01-02"], "hr": [72.5, 68.0]})
     records = _to_records(df)
     assert len(records) == 2

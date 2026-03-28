@@ -25,6 +25,7 @@ Quick start::
     print(ie.predict_tomorrow()["summary"])  # plain-language forecast
     ie.print_correlations()                  # personalised correlation insights
 """
+
 from samsung_health_sdk.ml.feature_matrix import build_daily_features, FEATURE_COLS, TARGET_COLS
 from samsung_health_sdk.ml.dataset import HealthWindowDataset
 from samsung_health_sdk.ml.model import HealthLSTMAttention

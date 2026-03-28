@@ -6,9 +6,11 @@ Run from the SHA/ directory:
 """
 
 import sys
+
 # Force UTF-8 output on Windows
 if sys.platform == "win32":
     import io
+
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
 from pathlib import Path
@@ -27,7 +29,7 @@ for m in metrics:
 
 # --- Date window ---
 START = "2024-10-01"
-END   = "2024-10-31"
+END = "2024-10-31"
 
 # --- Heart rate ---
 print("\n[Heart Rate (summary)]")
@@ -60,7 +62,11 @@ print("\n[Skin Temperature (summary)]")
 skin = p.get_skin_temperature(START, END)
 print(f"Rows: {len(skin)}")
 if not skin.empty:
-    print(skin[["start_time", "temperature", "temperature_min", "temperature_max"]].head(5).to_string())
+    print(
+        skin[["start_time", "temperature", "temperature_min", "temperature_max"]]
+        .head(5)
+        .to_string()
+    )
 
 # --- Respiratory rate (November - when data exists) ---
 print("\n[Respiratory Rate (minute-level, November 2024)]")
@@ -80,8 +86,20 @@ print("\n[Exercise sessions]")
 ex = p.get_exercise("2024-01-01", "2025-06-30")
 print(f"Rows: {len(ex)}")
 if not ex.empty:
-    print(ex[["start_time", "exercise_name", "duration_sec", "distance", "calorie",
-               "mean_heart_rate"]].head(5).to_string())
+    print(
+        ex[
+            [
+                "start_time",
+                "exercise_name",
+                "duration_sec",
+                "distance",
+                "calorie",
+                "mean_heart_rate",
+            ]
+        ]
+        .head(5)
+        .to_string()
+    )
 
 # --- Steps ---
 print("\n[Steps (May-Jun 2025)]")

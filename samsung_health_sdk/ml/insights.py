@@ -36,11 +36,11 @@ Usage::
     print(report["summary"])
     ie.print_correlations()
 """
+
 from __future__ import annotations
 
 from typing import Any
 
-import numpy as np
 import pandas as pd
 import torch
 
@@ -48,30 +48,30 @@ from samsung_health_sdk.ml.dataset import HealthWindowDataset
 
 # Human-readable labels for each feature column
 _LABELS: dict[str, str] = {
-    "sleep_quality_score":  "sleep quality",
-    "efficiency_pct":       "sleep efficiency",
-    "deep_min":             "deep sleep duration",
-    "rem_min":              "REM sleep duration",
-    "sleep_light_min":      "light sleep duration",
-    "awake_min":            "time awake in bed",
-    "total_h":              "total sleep hours",
-    "fragmentation_index":  "sleep fragmentation",
-    "rmssd_mean":           "HRV (RMSSD)",
-    "hrv_readiness_score":  "HRV readiness",
-    "hrv_deviation_pct":    "HRV deviation from baseline",
-    "mean_stress":          "average stress level",
+    "sleep_quality_score": "sleep quality",
+    "efficiency_pct": "sleep efficiency",
+    "deep_min": "deep sleep duration",
+    "rem_min": "REM sleep duration",
+    "sleep_light_min": "light sleep duration",
+    "awake_min": "time awake in bed",
+    "total_h": "total sleep hours",
+    "fragmentation_index": "sleep fragmentation",
+    "rmssd_mean": "HRV (RMSSD)",
+    "hrv_readiness_score": "HRV readiness",
+    "hrv_deviation_pct": "HRV deviation from baseline",
+    "mean_stress": "average stress level",
     "stress_deviation_pct": "stress elevation above baseline",
-    "sedentary_min":        "sedentary time",
-    "light_activity_min":   "light activity",
-    "low_mod_min":          "low-moderate activity",
-    "moderate_min":         "moderate activity",
-    "vigorous_min":         "vigorous exercise",
-    "active_min":           "total active minutes",
-    "mean_hr_active":       "heart rate during activity",
-    "rr_mean":              "respiratory rate",
-    "restlessness_score":   "sleep restlessness",
-    "cardiac_load":         "cardiac load (aerobic fitness proxy)",
-    "energy_index":         "energy index",
+    "sedentary_min": "sedentary time",
+    "light_activity_min": "light activity",
+    "low_mod_min": "low-moderate activity",
+    "moderate_min": "moderate activity",
+    "vigorous_min": "vigorous exercise",
+    "active_min": "total active minutes",
+    "mean_hr_active": "heart rate during activity",
+    "rr_mean": "respiratory rate",
+    "restlessness_score": "sleep restlessness",
+    "cardiac_load": "cardiac load (aerobic fitness proxy)",
+    "energy_index": "energy index",
 }
 
 
@@ -98,11 +98,11 @@ class InsightEngine:
         feature_cols: list[str],
         seq_len: int = 14,
     ) -> None:
-        self.model        = model
-        self.df           = df
+        self.model = model
+        self.df = df
         self.feature_cols = feature_cols
-        self.seq_len      = seq_len
-        self.device       = next(model.parameters()).device
+        self.seq_len = seq_len
+        self.device = next(model.parameters()).device
 
         # Build normalised dataset for inference (no augmentation)
         self._ds = HealthWindowDataset(
@@ -167,39 +167,48 @@ class InsightEngine:
         with torch.no_grad():
             preds, attn_w = self.model(x_in.detach())
 
-        pred_sleep  = float(preds["sleep_quality"].item())
-        pred_hrv    = float(preds["hrv_readiness"].item())
+        pred_sleep = float(preds["sleep_quality"].item())
+        pred_hrv = float(preds["hrv_readiness"].item())
         pred_energy = float(preds["energy_index"].item())
 
         # Attention weights per past day
         attn_np = attn_w.squeeze(0).cpu().numpy()
         attn_by_date = {
-            str(date_labels[i]): round(float(attn_np[i]), 4)
-            for i in range(len(date_labels))
+            str(date_labels[i]): round(float(attn_np[i]), 4) for i in range(len(date_labels))
         }
 
         # Feature importance dict and top-3 list
         feature_importance = dict(zip(self.feature_cols, importance_arr.tolist()))
-        top3_cols  = sorted(feature_importance, key=feature_importance.__getitem__, reverse=True)[:3]
+        top3_cols = sorted(feature_importance, key=feature_importance.__getitem__, reverse=True)[:3]
         top_drivers = [_LABELS.get(c, c) for c in top3_cols]
 
         # Personal 30-day averages as comparison baseline
-        recent   = self.df[self.feature_cols].tail(30)
-        avg_sleep = float(recent["sleep_quality_score"].median()) \
-            if "sleep_quality_score" in recent else 65.0
-        avg_hrv   = float(recent["hrv_readiness_score"].median()) \
-            if "hrv_readiness_score" in recent else 65.0
+        recent = self.df[self.feature_cols].tail(30)
+        avg_sleep = (
+            float(recent["sleep_quality_score"].median())
+            if "sleep_quality_score" in recent
+            else 65.0
+        )
+        avg_hrv = (
+            float(recent["hrv_readiness_score"].median())
+            if "hrv_readiness_score" in recent
+            else 65.0
+        )
 
         summary = _build_summary(
-            pred_sleep, pred_hrv, pred_energy,
-            avg_sleep, avg_hrv, top_drivers,
+            pred_sleep,
+            pred_hrv,
+            pred_energy,
+            avg_sleep,
+            avg_hrv,
+            top_drivers,
         )
 
         return {
             "predictions": {
                 "sleep_quality": round(pred_sleep, 1),
                 "hrv_readiness": round(pred_hrv, 1),
-                "energy_index":  round(pred_energy, 1),
+                "energy_index": round(pred_energy, 1),
             },
             "attention": attn_by_date,
             "top_drivers": top_drivers,
@@ -238,12 +247,12 @@ class InsightEngine:
         sorted by |correlation| descending.
         """
         df = self.df.copy()
-        outcome_cols = [c for c in ["sleep_quality_score", "hrv_readiness_score", "energy_index"]
-                        if c in df.columns]
-        lifestyle_cols = [
-            c for c in self.feature_cols
-            if c not in outcome_cols
+        outcome_cols = [
+            c
+            for c in ["sleep_quality_score", "hrv_readiness_score", "energy_index"]
+            if c in df.columns
         ]
+        lifestyle_cols = [c for c in self.feature_cols if c not in outcome_cols]
 
         rows: list[dict] = []
         for outcome in outcome_cols:
@@ -256,15 +265,17 @@ class InsightEngine:
                 corr = float(x[valid].corr(y[valid], method="spearman"))
                 if abs(corr) < min_abs_corr:
                     continue
-                rows.append({
-                    "feature":       feat,
-                    "feature_label": _LABELS.get(feat, feat),
-                    "outcome":       outcome,
-                    "outcome_label": _LABELS.get(outcome, outcome),
-                    "correlation":   round(corr, 3),
-                    "direction":     "positive" if corr > 0 else "negative",
-                    "insight":       _corr_sentence(feat, outcome, corr),
-                })
+                rows.append(
+                    {
+                        "feature": feat,
+                        "feature_label": _LABELS.get(feat, feat),
+                        "outcome": outcome,
+                        "outcome_label": _LABELS.get(outcome, outcome),
+                        "correlation": round(corr, 3),
+                        "direction": "positive" if corr > 0 else "negative",
+                        "insight": _corr_sentence(feat, outcome, corr),
+                    }
+                )
 
         if not rows:
             return pd.DataFrame()
@@ -325,10 +336,12 @@ class InsightEngine:
             # Rolling 3-day count of high-stress days
             consec = high_stress.rolling(3, min_periods=3).sum()
             after_streak = consec >= 3
-            deep_after   = df.loc[after_streak.shift(1).fillna(False), "deep_min"]
-            deep_other   = df.loc[~after_streak.shift(1).fillna(False), "deep_min"]
+            deep_after = df.loc[after_streak.shift(1).fillna(False), "deep_min"]
+            deep_other = df.loc[~after_streak.shift(1).fillna(False), "deep_min"]
             if len(deep_after) >= 5 and deep_other.notna().sum() >= 5:
-                drop_pct = (deep_other.mean() - deep_after.mean()) / (deep_other.mean() + 1e-9) * 100
+                drop_pct = (
+                    (deep_other.mean() - deep_after.mean()) / (deep_other.mean() + 1e-9) * 100
+                )
                 if drop_pct > 5:
                     patterns.append(
                         f"After 3+ consecutive high-stress days, your deep sleep drops "
@@ -337,8 +350,8 @@ class InsightEngine:
 
         # ── Pattern 2: vigorous exercise and next-day HRV ──
         if "vigorous_min" in df and "hrv_readiness_score" in df:
-            has_vigorous   = df["vigorous_min"] > 20
-            hrv_after_vig  = df.loc[has_vigorous.shift(1).fillna(False), "hrv_readiness_score"]
+            has_vigorous = df["vigorous_min"] > 20
+            hrv_after_vig = df.loc[has_vigorous.shift(1).fillna(False), "hrv_readiness_score"]
             hrv_after_rest = df.loc[~has_vigorous.shift(1).fillna(False), "hrv_readiness_score"]
             if hrv_after_vig.notna().sum() >= 5 and hrv_after_rest.notna().sum() >= 5:
                 diff = hrv_after_vig.mean() - hrv_after_rest.mean()
@@ -352,8 +365,8 @@ class InsightEngine:
         # ── Pattern 3: late-night stress and sleep fragmentation ──
         if "stress_deviation_pct" in df and "fragmentation_index" in df:
             high_dev = df["stress_deviation_pct"] > 20
-            frag_hi  = df.loc[high_dev, "fragmentation_index"]
-            frag_lo  = df.loc[~high_dev, "fragmentation_index"]
+            frag_hi = df.loc[high_dev, "fragmentation_index"]
+            frag_lo = df.loc[~high_dev, "fragmentation_index"]
             if frag_hi.notna().sum() >= 5 and frag_lo.notna().sum() >= 5:
                 diff = frag_hi.mean() - frag_lo.mean()
                 if diff > 0.1:
@@ -364,9 +377,9 @@ class InsightEngine:
 
         # ── Pattern 4: sedentary days and next-day energy ──
         if "sedentary_min" in df and "energy_index" in df:
-            very_sed    = df["sedentary_min"] > df["sedentary_min"].quantile(0.75)
+            very_sed = df["sedentary_min"] > df["sedentary_min"].quantile(0.75)
             energy_next = df["energy_index"].shift(-1)
-            e_sed  = energy_next[very_sed]
+            e_sed = energy_next[very_sed]
             e_actv = energy_next[~very_sed]
             if e_sed.notna().sum() >= 5 and e_actv.notna().sum() >= 5:
                 diff = e_actv.mean() - e_sed.mean()
@@ -395,6 +408,7 @@ class InsightEngine:
 # ------------------------------------------------------------------
 # Private helpers
 # ------------------------------------------------------------------
+
 
 def _level(score: float) -> str:
     if score >= 80:
@@ -439,15 +453,11 @@ def _build_summary(
 
 
 def _corr_sentence(feature: str, outcome: str, corr: float) -> str:
-    feat_label    = _LABELS.get(feature, feature)
+    feat_label = _LABELS.get(feature, feature)
     outcome_label = _LABELS.get(outcome, outcome)
-    more_or_less  = "more" if corr > 0 else "less"
+    more_or_less = "more" if corr > 0 else "less"
     higher_or_lower = "higher" if corr > 0 else "lower"
-    strength = (
-        "strongly" if abs(corr) > 0.5 else
-        "moderately" if abs(corr) > 0.3 else
-        "weakly"
-    )
+    strength = "strongly" if abs(corr) > 0.5 else "moderately" if abs(corr) > 0.3 else "weakly"
     return (
         f"Days with {more_or_less} {feat_label} are {strength} associated with "
         f"{higher_or_lower} {outcome_label} the next day."
