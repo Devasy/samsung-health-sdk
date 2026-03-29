@@ -18,17 +18,10 @@ class StepsMetric(BaseMetric):
 
     metric_name = "com.samsung.shealth.tracker.pedometer_step_count"
     value_columns = [
-        "start_time",
-        "end_time",
-        "count",
-        "walk_step",
-        "run_step",
-        "distance",
-        "calorie",
-        "speed",
-        "datauuid",
-        "deviceuuid",
-        "time_offset",
+        "start_time", "end_time",
+        "count", "walk_step", "run_step",
+        "distance", "calorie", "speed",
+        "datauuid", "deviceuuid", "time_offset",
     ]
 
     def load_summary(self, start: DateLike = None, end: DateLike = None) -> pd.DataFrame:

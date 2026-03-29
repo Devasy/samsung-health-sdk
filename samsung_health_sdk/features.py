@@ -34,7 +34,6 @@ daily_activity_profile()  Per-day: sedentary/light/moderate/vigorous minute coun
 
 from __future__ import annotations
 
-from pathlib import Path
 import warnings
 from typing import Literal
 
@@ -45,11 +44,11 @@ from samsung_health_sdk.parser import SamsungHealthParser
 from samsung_health_sdk.utils import DateLike, filter_date_range
 
 # activity_level bucket edges and labels (used in daily_activity_profile)
-_AL_BINS = [0, 5, 20, 50, 100, float("inf")]
+_AL_BINS   = [0, 5, 20, 50, 100, float("inf")]
 _AL_LABELS = ["sedentary", "light", "low_mod", "moderate", "vigorous"]
 
 # activity_level threshold that indicates intentional walking movement
-_WALK_AL_MIN = 20  # below this → sedentary / light fidgeting
+_WALK_AL_MIN = 20   # below this → sedentary / light fidgeting
 _WALK_AL_MAX = 400  # above this → running / artefact
 
 
@@ -85,7 +84,7 @@ class HealthFeatureEngine:
         """
         self._p = parser
         self._tz = pd.Timedelta(hours=tz_offset_hours)
-        self._mv_cache: pd.DataFrame | None = None  # movement bins (full range)
+        self._mv_cache: pd.DataFrame | None = None          # movement bins (full range)
         self._speed_cal: tuple[float, float] | None = None  # (a, b): speed = exp(b)*al^a
 
     # ------------------------------------------------------------------
@@ -149,7 +148,7 @@ class HealthFeatureEngine:
 
         # Restrict movement bins to the pedometer date range for calibration
         ped_start = steps["start_time"].min()
-        ped_end = steps["start_time"].max()
+        ped_end   = steps["start_time"].max()
         mv = self._get_movement_bins(ped_start, ped_end)
         if mv.empty:
             return None
@@ -159,8 +158,8 @@ class HealthFeatureEngine:
         )
         # Walking range only
         cal = cal[
-            cal["activity_level"].between(_WALK_AL_MIN, _WALK_AL_MAX)
-            & cal["speed"].between(0.5, 3.0)
+            cal["activity_level"].between(_WALK_AL_MIN, _WALK_AL_MAX) &
+            cal["speed"].between(0.5, 3.0)
         ]
         if len(cal) < 30:
             warnings.warn(
@@ -210,8 +209,8 @@ class HealthFeatureEngine:
 
             awake_s = self._stage_seconds(g, "Awake")
             light_s = self._stage_seconds(g, "Light")
-            deep_s = self._stage_seconds(g, "Deep")
-            rem_s = self._stage_seconds(g, "REM")
+            deep_s  = self._stage_seconds(g, "Deep")
+            rem_s   = self._stage_seconds(g, "REM")
             sleep_s = total_s - awake_s  # actual sleep time
 
             efficiency = sleep_s / total_s * 100 if total_s > 0 else np.nan
@@ -220,34 +219,32 @@ class HealthFeatureEngine:
             awake_segs = (g["stage_label"] == "Awake").sum()
             frag_index = awake_segs / (total_s / 3600) if total_s > 0 else np.nan
 
-            deep_pct = deep_s / sleep_s * 100 if sleep_s > 0 else np.nan
-            rem_pct = rem_s / sleep_s * 100 if sleep_s > 0 else np.nan
+            deep_pct = deep_s  / sleep_s * 100 if sleep_s > 0 else np.nan
+            rem_pct  = rem_s   / sleep_s * 100 if sleep_s > 0 else np.nan
 
             # Quality score (0–100):
             #   40 pts from efficiency (target ≥85%)
             #   30 pts from deep sleep  (target ≥15% of sleep time)
             #   30 pts from REM sleep   (target ≥20% of sleep time)
-            q_eff = min(efficiency / 85, 1.0) * 40 if not np.isnan(efficiency) else 0
-            q_deep = min(deep_pct / 15, 1.0) * 30 if not np.isnan(deep_pct) else 0
-            q_rem = min(rem_pct / 20, 1.0) * 30 if not np.isnan(rem_pct) else 0
+            q_eff  = min(efficiency / 85, 1.0) * 40  if not np.isnan(efficiency) else 0
+            q_deep = min(deep_pct / 15,   1.0) * 30  if not np.isnan(deep_pct)   else 0
+            q_rem  = min(rem_pct  / 20,   1.0) * 30  if not np.isnan(rem_pct)    else 0
             quality = q_eff + q_deep + q_rem
 
-            rows.append(
-                {
-                    "sleep_id": sid,
-                    "date": self._local_date(g["start_time"]).iloc[0],
-                    "total_h": round(total_s / 3600, 2),
-                    "efficiency_pct": round(efficiency, 1),
-                    "deep_min": round(deep_s / 60, 1),
-                    "rem_min": round(rem_s / 60, 1),
-                    "light_min": round(light_s / 60, 1),
-                    "awake_min": round(awake_s / 60, 1),
-                    "deep_pct": round(deep_pct, 1),
-                    "rem_pct": round(rem_pct, 1),
-                    "fragmentation_index": round(frag_index, 2),
-                    "quality_score": round(quality, 1),
-                }
-            )
+            rows.append({
+                "sleep_id":           sid,
+                "date":               self._local_date(g["start_time"]).iloc[0],
+                "total_h":            round(total_s / 3600, 2),
+                "efficiency_pct":     round(efficiency, 1),
+                "deep_min":           round(deep_s / 60, 1),
+                "rem_min":            round(rem_s / 60, 1),
+                "light_min":          round(light_s / 60, 1),
+                "awake_min":          round(awake_s / 60, 1),
+                "deep_pct":           round(deep_pct, 1),
+                "rem_pct":            round(rem_pct, 1),
+                "fragmentation_index": round(frag_index, 2),
+                "quality_score":      round(quality, 1),
+            })
 
         df = pd.DataFrame(rows)
         if not df.empty:
@@ -281,21 +278,17 @@ class HealthFeatureEngine:
             hrv_suppression_flag                 # True if rmssd_mean < 0.85 × personal_median
         """
         sleep = self._p.get_sleep(start, end)
-        hrv = self._p.get_hrv(start, end)
-        rr = self._p.get_respiratory_rate(start, end, granularity="minute")
-        mv = self._get_movement_bins(start, end)  # may be empty — optional
+        hrv   = self._p.get_hrv(start, end)
+        rr    = self._p.get_respiratory_rate(start, end, granularity="minute")
+        mv    = self._get_movement_bins(start, end)  # may be empty — optional
 
         if sleep.empty or hrv.empty:
             return pd.DataFrame()
 
-        sessions = (
-            sleep.groupby("sleep_id")
-            .agg(
-                sleep_start=("start_time", "min"),
-                sleep_end=("end_time", "max"),
-            )
-            .reset_index()
-        )
+        sessions = sleep.groupby("sleep_id").agg(
+            sleep_start=("start_time", "min"),
+            sleep_end=("end_time",   "max"),
+        ).reset_index()
 
         rows = []
         for _, s in sessions.iterrows():
@@ -303,48 +296,46 @@ class HealthFeatureEngine:
             if duration_h < min_hours:
                 continue
 
-            w_hrv = hrv[(hrv["start_time"] >= s.sleep_start) & (hrv["start_time"] <= s.sleep_end)]
-            w_rr = (
-                rr[(rr["start_time"] >= s.sleep_start) & (rr["start_time"] <= s.sleep_end)]
-                if not rr.empty
-                else pd.DataFrame()
-            )
+            w_hrv = hrv[
+                (hrv["start_time"] >= s.sleep_start) &
+                (hrv["start_time"] <= s.sleep_end)
+            ]
+            w_rr = rr[
+                (rr["start_time"] >= s.sleep_start) &
+                (rr["start_time"] <= s.sleep_end)
+            ] if not rr.empty else pd.DataFrame()
 
             if w_hrv.empty:
                 continue
 
             rr_valid = (
                 w_rr[w_rr["respiratory_rate"] > 0]["respiratory_rate"]
-                if not w_rr.empty
-                else pd.Series(dtype=float)
+                if not w_rr.empty else pd.Series(dtype=float)
             )
 
             # Movement restlessness during sleep
             if not mv.empty:
-                w_mv = mv[(mv["start_time"] >= s.sleep_start) & (mv["start_time"] <= s.sleep_end)]
-                restlessness_score = (
-                    round(w_mv["activity_level"].mean(), 2) if not w_mv.empty else np.nan
-                )
-                restless_min = (
-                    int((w_mv["activity_level"] > _WALK_AL_MIN).sum()) if not w_mv.empty else 0
-                )
+                w_mv = mv[
+                    (mv["start_time"] >= s.sleep_start) &
+                    (mv["start_time"] <= s.sleep_end)
+                ]
+                restlessness_score = round(w_mv["activity_level"].mean(), 2) if not w_mv.empty else np.nan
+                restless_min       = int((w_mv["activity_level"] > _WALK_AL_MIN).sum()) if not w_mv.empty else 0
             else:
                 restlessness_score = np.nan
-                restless_min = np.nan
+                restless_min       = np.nan
 
-            rows.append(
-                {
-                    "sleep_id": s.sleep_id,
-                    "date": self._local_date(pd.Series([s.sleep_start])).iloc[0],
-                    "rmssd_mean": round(w_hrv["rmssd"].mean(), 2),
-                    "rmssd_min": round(w_hrv["rmssd"].min(), 2),
-                    "rmssd_std": round(w_hrv["rmssd"].std(), 2),
-                    "rr_mean": round(rr_valid.mean(), 2) if len(rr_valid) else np.nan,
-                    "rr_std": round(rr_valid.std(), 2) if len(rr_valid) else np.nan,
-                    "restlessness_score": restlessness_score,
-                    "restless_min": restless_min,
-                }
-            )
+            rows.append({
+                "sleep_id":          s.sleep_id,
+                "date":              self._local_date(pd.Series([s.sleep_start])).iloc[0],
+                "rmssd_mean":        round(w_hrv["rmssd"].mean(), 2),
+                "rmssd_min":         round(w_hrv["rmssd"].min(),  2),
+                "rmssd_std":         round(w_hrv["rmssd"].std(),  2),
+                "rr_mean":           round(rr_valid.mean(), 2) if len(rr_valid) else np.nan,
+                "rr_std":            round(rr_valid.std(),  2) if len(rr_valid) else np.nan,
+                "restlessness_score": restlessness_score,
+                "restless_min":      restless_min,
+            })
 
         df = pd.DataFrame(rows)
         if df.empty:
@@ -398,22 +389,19 @@ class HealthFeatureEngine:
         )
 
         physio["deviation_pct"] = (
-            (physio["rmssd_mean"] - physio[baseline_col]) / physio[baseline_col] * 100
+            (physio["rmssd_mean"] - physio[baseline_col])
+            / physio[baseline_col] * 100
         ).round(1)
 
         # Readiness score: 50 at baseline, +/- proportional, capped 0–100
-        physio["readiness_score"] = (50 + physio["deviation_pct"] * 0.5).clip(0, 100).round(1)
+        physio["readiness_score"] = (
+            (50 + physio["deviation_pct"] * 0.5).clip(0, 100).round(1)
+        )
 
         physio["low_readiness_flag"] = physio["deviation_pct"] < -15
 
-        cols = [
-            "date",
-            "rmssd_mean",
-            baseline_col,
-            "deviation_pct",
-            "readiness_score",
-            "low_readiness_flag",
-        ]
+        cols = ["date", "rmssd_mean", baseline_col,
+                "deviation_pct", "readiness_score", "low_readiness_flag"]
         return physio[cols].dropna(subset=[baseline_col]).reset_index(drop=True)
 
     # ------------------------------------------------------------------
@@ -461,11 +449,13 @@ class HealthFeatureEngine:
         daily["stress_baseline"] = (
             daily["stress_mean"]
             .shift(1)
-            .rolling(window=stress_baseline_days, min_periods=max(5, stress_baseline_days // 4))
+            .rolling(window=stress_baseline_days,
+                     min_periods=max(5, stress_baseline_days // 4))
             .median()
         )
         daily["stress_deviation_pct"] = (
-            (daily["stress_mean"] - daily["stress_baseline"]) / daily["stress_baseline"] * 100
+            (daily["stress_mean"] - daily["stress_baseline"])
+            / daily["stress_baseline"] * 100
         ).round(1)
 
         # Merge: sleep date → previous calendar day's stress
@@ -473,37 +463,23 @@ class HealthFeatureEngine:
             lambda d: (pd.Timestamp(d) - pd.Timedelta(days=1)).date()
         )
         merged = sleep_stats.merge(
-            daily.rename(
-                columns={
-                    "date": "prev_date",
-                    "stress_mean": "prev_stress_mean",
-                    "stress_baseline": "prev_stress_baseline",
-                    "stress_deviation_pct": "prev_stress_deviation",
-                }
-            ),
+            daily.rename(columns={
+                "date":                  "prev_date",
+                "stress_mean":           "prev_stress_mean",
+                "stress_baseline":       "prev_stress_baseline",
+                "stress_deviation_pct":  "prev_stress_deviation",
+            }),
             on="prev_date",
             how="inner",
         )
 
         cols = [
-            "date",
-            "sleep_id",
-            "prev_stress_mean",
-            "prev_stress_baseline",
-            "prev_stress_deviation",
-            "quality_score",
-            "efficiency_pct",
-            "deep_min",
-            "rem_min",
-            "total_h",
-            "fragmentation_index",
+            "date", "sleep_id",
+            "prev_stress_mean", "prev_stress_baseline", "prev_stress_deviation",
+            "quality_score", "efficiency_pct", "deep_min", "rem_min",
+            "total_h", "fragmentation_index",
         ]
-        return (
-            merged[cols]
-            .dropna(subset=["prev_stress_baseline"])
-            .sort_values("date")
-            .reset_index(drop=True)
-        )
+        return merged[cols].dropna(subset=["prev_stress_baseline"]).sort_values("date").reset_index(drop=True)
 
     # ------------------------------------------------------------------
     # 5. Walking cardiac load
@@ -522,41 +498,33 @@ class HealthFeatureEngine:
             return pd.DataFrame()
 
         walks = ex[
-            (ex["exercise_name"] == "Walking")
-            & ex["mean_heart_rate"].notna()
-            & ex["distance"].notna()
-            & ex["duration_sec"].notna()
-            & (ex["duration_sec"] >= min_duration_sec)
-            & (ex["distance"] >= min_distance_m)
+            (ex["exercise_name"] == "Walking") &
+            ex["mean_heart_rate"].notna() &
+            ex["distance"].notna() &
+            ex["duration_sec"].notna() &
+            (ex["duration_sec"] >= min_duration_sec) &
+            (ex["distance"] >= min_distance_m)
         ].copy()
 
         if walks.empty:
             return pd.DataFrame()
 
-        walks["date"] = self._local_date(walks["start_time"])
+        walks["date"]         = self._local_date(walks["start_time"])
         walks["duration_min"] = (walks["duration_sec"] / 60).round(1)
-        walks["speed_mps"] = (walks["distance"] / walks["duration_sec"]).round(3)
-        walks["mean_hr"] = walks["mean_heart_rate"]
+        walks["speed_mps"]    = (walks["distance"] / walks["duration_sec"]).round(3)
+        walks["mean_hr"]      = walks["mean_heart_rate"]
         walks["cardiac_load"] = (walks["mean_hr"] / walks["speed_mps"]).round(2)
-        walks["source"] = "exercise"
+        walks["source"]       = "exercise"
 
-        walks = walks[walks["speed_mps"].between(0.3, 3.0) & walks["cardiac_load"].between(30, 300)]
+        walks = walks[
+            walks["speed_mps"].between(0.3, 3.0) &
+            walks["cardiac_load"].between(30, 300)
+        ]
 
-        return (
-            walks[
-                [
-                    "date",
-                    "duration_min",
-                    "distance",
-                    "speed_mps",
-                    "mean_hr",
-                    "cardiac_load",
-                    "source",
-                ]
-            ]
-            .rename(columns={"distance": "distance_m"})
-            .reset_index(drop=True)
-        )
+        return walks[["date", "duration_min", "distance", "speed_mps",
+                       "mean_hr", "cardiac_load", "source"]].rename(
+            columns={"distance": "distance_m"}
+        ).reset_index(drop=True)
 
     def _load_pedometer_walks(
         self,
@@ -592,7 +560,9 @@ class HealthFeatureEngine:
         hr_min["minute"] = hr_min["start_time"].dt.floor("min")
 
         # Keep a single HR value per minute (mean in case of duplicates)
-        hr_per_min = hr_min.groupby("minute")["heart_rate"].mean().reset_index()
+        hr_per_min = (
+            hr_min.groupby("minute")["heart_rate"].mean().reset_index()
+        )
 
         joined = steps.merge(hr_per_min, on="minute", how="inner")
         if joined.empty:
@@ -612,36 +582,37 @@ class HealthFeatureEngine:
         rows = []
         for bid, bout in joined.groupby("bout_id"):
             dur_sec = len(bout) * 60  # each row is exactly 60 s
-            dist_m = bout["distance"].sum() if "distance" in bout.columns else np.nan
+            dist_m  = bout["distance"].sum() if "distance" in bout.columns else np.nan
             if dur_sec < min_duration_sec:
                 continue
             if not np.isnan(dist_m) and dist_m < min_distance_m:
                 continue
 
-            mean_hr = bout["heart_rate"].mean()
+            mean_hr    = bout["heart_rate"].mean()
             mean_speed = bout["speed"].mean()
             if mean_speed <= 0:
                 continue
 
             cardiac_load = mean_hr / mean_speed
 
-            rows.append(
-                {
-                    "date": self._local_date(pd.Series([bout["minute"].iloc[0]])).iloc[0],
-                    "duration_min": round(dur_sec / 60, 1),
-                    "distance_m": round(dist_m, 0) if not np.isnan(dist_m) else np.nan,
-                    "speed_mps": round(mean_speed, 3),
-                    "mean_hr": round(mean_hr, 1),
-                    "cardiac_load": round(cardiac_load, 2),
-                    "source": "pedometer",
-                }
-            )
+            rows.append({
+                "date":         self._local_date(pd.Series([bout["minute"].iloc[0]])).iloc[0],
+                "duration_min": round(dur_sec / 60, 1),
+                "distance_m":   round(dist_m, 0) if not np.isnan(dist_m) else np.nan,
+                "speed_mps":    round(mean_speed, 3),
+                "mean_hr":      round(mean_hr, 1),
+                "cardiac_load": round(cardiac_load, 2),
+                "source":       "pedometer",
+            })
 
         if not rows:
             return pd.DataFrame()
 
         df = pd.DataFrame(rows)
-        df = df[df["speed_mps"].between(0.3, 3.0) & df["cardiac_load"].between(30, 300)]
+        df = df[
+            df["speed_mps"].between(0.3, 3.0) &
+            df["cardiac_load"].between(30, 300)
+        ]
         return df.reset_index(drop=True)
 
     def _load_movement_walks(
@@ -698,28 +669,26 @@ class HealthFeatureEngine:
 
         rows = []
         for _, bout in joined.groupby("bout_id"):
-            dur_sec = len(bout) * 60
-            mean_hr = bout["heart_rate"].mean()
-            mean_al = bout["activity_level"].mean()
-            speed_est = float(np.exp(b) * mean_al**a)
-            speed_est = max(0.3, min(speed_est, 3.0))
+            dur_sec    = len(bout) * 60
+            mean_hr    = bout["heart_rate"].mean()
+            mean_al    = bout["activity_level"].mean()
+            speed_est  = float(np.exp(b) * mean_al ** a)
+            speed_est  = max(0.3, min(speed_est, 3.0))
 
             if dur_sec < min_duration_sec:
                 continue
 
             cardiac_load = mean_hr / speed_est
 
-            rows.append(
-                {
-                    "date": self._local_date(pd.Series([bout["minute"].iloc[0]])).iloc[0],
-                    "duration_min": round(dur_sec / 60, 1),
-                    "distance_m": np.nan,  # not available from movement data
-                    "speed_mps": round(speed_est, 3),
-                    "mean_hr": round(mean_hr, 1),
-                    "cardiac_load": round(cardiac_load, 2),
-                    "source": "movement",
-                }
-            )
+            rows.append({
+                "date":         self._local_date(pd.Series([bout["minute"].iloc[0]])).iloc[0],
+                "duration_min": round(dur_sec / 60, 1),
+                "distance_m":   np.nan,  # not available from movement data
+                "speed_mps":    round(speed_est, 3),
+                "mean_hr":      round(mean_hr, 1),
+                "cardiac_load": round(cardiac_load, 2),
+                "source":       "movement",
+            })
 
         if not rows:
             return pd.DataFrame()
@@ -790,7 +759,7 @@ class HealthFeatureEngine:
         else:  # 'auto' or 'combined': pedometer > movement > exercise
             ped = self._load_pedometer_walks(**kwargs)
             mov = self._load_movement_walks(**kwargs)
-            ex = self._load_exercise_walks(**kwargs)
+            ex  = self._load_exercise_walks(**kwargs)
 
             # Determine which dates each source covers
             ped_dates = set(ped["date"].unique()) if not ped.empty else set()
@@ -812,12 +781,17 @@ class HealthFeatureEngine:
         walks = walks.sort_values("date").reset_index(drop=True)
 
         # Rolling N-week mean (date-based)
-        walks_daily = walks.groupby("date")[["cardiac_load"]].mean().reset_index()
+        walks_daily = (
+            walks.groupby("date")[["cardiac_load"]]
+            .mean()
+            .reset_index()
+        )
         roll_col = f"rolling_{rolling_weeks}w_cardiac_load"
         window = rolling_weeks * 7  # days
         walks_daily[roll_col] = (
             walks_daily["cardiac_load"]
-            .rolling(window=min(window, len(walks_daily)), min_periods=max(2, rolling_weeks))
+            .rolling(window=min(window, len(walks_daily)),
+                     min_periods=max(2, rolling_weeks))
             .mean()
             .round(2)
         )
@@ -826,11 +800,11 @@ class HealthFeatureEngine:
         valid = walks_daily[roll_col].dropna()
         if len(valid) >= 8:
             q = len(valid) // 4
-            early = valid.iloc[:q].mean()
+            early  = valid.iloc[:q].mean()
             recent = valid.iloc[-q:].mean()
             pct_change = (recent - early) / early * 100
             if pct_change < -5:
-                trend = "improving"  # lower cardiac load = fitter
+                trend = "improving"      # lower cardiac load = fitter
             elif pct_change > 5:
                 trend = "declining"
             else:
@@ -841,7 +815,8 @@ class HealthFeatureEngine:
         walks_daily["cardiac_load_trend"] = trend
 
         result = walks.merge(
-            walks_daily[["date", roll_col, "cardiac_load_trend"]], on="date", how="left"
+            walks_daily[["date", roll_col, "cardiac_load_trend"]],
+            on="date", how="left"
         )
         return result.sort_values("date").reset_index(drop=True)
 
@@ -908,31 +883,29 @@ class HealthFeatureEngine:
         rows = []
         for date, g in mv_hr.groupby("local_date"):
             counts = g["al_bucket"].value_counts()
-            sed_m = int(counts.get("sedentary", 0))
-            li_m = int(counts.get("light", 0))
-            lm_m = int(counts.get("low_mod", 0))
-            mo_m = int(counts.get("moderate", 0))
-            vi_m = int(counts.get("vigorous", 0))
+            sed_m  = int(counts.get("sedentary", 0))
+            li_m   = int(counts.get("light",     0))
+            lm_m   = int(counts.get("low_mod",   0))
+            mo_m   = int(counts.get("moderate",  0))
+            vi_m   = int(counts.get("vigorous",  0))
             active = li_m + lm_m + mo_m + vi_m
 
             # HR stats
             hr_active = g.loc[g["activity_level"] >= _WALK_AL_MIN, "heart_rate"].dropna()
-            hr_all = g["heart_rate"].dropna()
+            hr_all    = g["heart_rate"].dropna()
 
-            rows.append(
-                {
-                    "date": date,
-                    "sedentary_min": sed_m,
-                    "light_min": li_m,
-                    "low_mod_min": lm_m,
-                    "moderate_min": mo_m,
-                    "vigorous_min": vi_m,
-                    "active_min": active,
-                    "total_tracked_min": len(g),
-                    "mean_hr_active": round(hr_active.mean(), 1) if len(hr_active) else np.nan,
-                    "median_hr_day": round(hr_all.median(), 1) if len(hr_all) else np.nan,
-                }
-            )
+            rows.append({
+                "date":              date,
+                "sedentary_min":     sed_m,
+                "light_min":         li_m,
+                "low_mod_min":       lm_m,
+                "moderate_min":      mo_m,
+                "vigorous_min":      vi_m,
+                "active_min":        active,
+                "total_tracked_min": len(g),
+                "mean_hr_active":    round(hr_active.mean(), 1) if len(hr_active) else np.nan,
+                "median_hr_day":     round(hr_all.median(),  1) if len(hr_all)    else np.nan,
+            })
 
         df = pd.DataFrame(rows).sort_values("date").reset_index(drop=True)
         if df.empty:
@@ -953,24 +926,23 @@ class HealthFeatureEngine:
             daily_stress["stress_baseline"] = (
                 daily_stress["mean_stress"]
                 .shift(1)
-                .rolling(window=stress_baseline_days, min_periods=max(5, stress_baseline_days // 4))
+                .rolling(window=stress_baseline_days,
+                         min_periods=max(5, stress_baseline_days // 4))
                 .median()
             )
             daily_stress["stress_deviation_pct"] = (
                 (daily_stress["mean_stress"] - daily_stress["stress_baseline"])
-                / daily_stress["stress_baseline"]
-                * 100
+                / daily_stress["stress_baseline"] * 100
             ).round(1)
 
             df = df.merge(
                 daily_stress[["date", "mean_stress", "stress_baseline", "stress_deviation_pct"]],
-                on="date",
-                how="left",
+                on="date", how="left",
             )
         else:
-            df["mean_stress"] = np.nan
-            df["stress_baseline"] = np.nan
-            df["stress_deviation_pct"] = np.nan
+            df["mean_stress"]           = np.nan
+            df["stress_baseline"]       = np.nan
+            df["stress_deviation_pct"]  = np.nan
 
         return df
 
@@ -1061,5 +1033,5 @@ class HealthFeatureEngine:
                                start="2024-11-01", end="2025-06-30")
         """
         from samsung_health_sdk.report.builder import ReportBuilder
-
+        from pathlib import Path
         return ReportBuilder(self).build(output_path, start=start, end=end, title=title)

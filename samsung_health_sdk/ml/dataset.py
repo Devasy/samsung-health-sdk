@@ -16,7 +16,6 @@ Both X and y are min-max normalised to [0, 1] using statistics computed from
 the full dataset.  The normalisation parameters (feat_min, feat_max, etc.) are
 stored on the dataset object so the trainer can save them alongside the model.
 """
-
 from __future__ import annotations
 
 import numpy as np
@@ -92,7 +91,7 @@ class HealthWindowDataset(Dataset):
         data[self.target_cols] = (data[self.target_cols] - self.tgt_min) / tgt_range
 
         self._feat = data[self.feature_cols].values.astype(np.float32)
-        self._tgt = data[self.target_cols].values.astype(np.float32)
+        self._tgt  = data[self.target_cols].values.astype(np.float32)
         self.dates = list(df.index)
 
     def __len__(self) -> int:
@@ -100,7 +99,7 @@ class HealthWindowDataset(Dataset):
         return max(0, len(self._feat) - self.seq_len)
 
     def __getitem__(self, idx: int):
-        x = self._feat[idx : idx + self.seq_len].copy()
+        x = self._feat[idx: idx + self.seq_len].copy()
         y = self._tgt[idx + self.seq_len]
 
         if self.augment:
@@ -121,8 +120,8 @@ class HealthWindowDataset(Dataset):
         x_tensor : Tensor (seq_len, n_features)
         date_labels : list of date-like objects (length seq_len)
         """
-        x = self._feat[idx : idx + self.seq_len].copy()
-        dates = self.dates[idx : idx + self.seq_len]
+        x = self._feat[idx: idx + self.seq_len].copy()
+        dates = self.dates[idx: idx + self.seq_len]
         return torch.from_numpy(x), dates
 
     def denorm_targets(self, y_norm: np.ndarray) -> np.ndarray:

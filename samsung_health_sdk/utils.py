@@ -5,10 +5,11 @@ from __future__ import annotations
 import json
 import re
 import warnings
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Union
 
+import numpy as np
 import pandas as pd
 
 DateLike = Union[str, datetime, pd.Timestamp, None]
@@ -79,11 +80,10 @@ def read_csv(path: Union[str, Path]) -> pd.DataFrame:
             header=0,
             low_memory=False,
             encoding="utf-8-sig",  # handles BOM
-            index_col=False,  # data rows may have a trailing comma → prevents column shift
+            index_col=False,       # data rows may have a trailing comma → prevents column shift
         )
     except Exception as exc:
         from samsung_health_sdk.exceptions import DataParseError
-
         raise DataParseError(str(path), str(exc)) from exc
 
     df.columns = [_strip_namespace(c) for c in df.columns]

@@ -24,7 +24,6 @@ _TEMPLATE = Path(__file__).parent / "template.html"
 # JSON serialisation helpers
 # ---------------------------------------------------------------------------
 
-
 class _Enc(json.JSONEncoder):
     """Handles numpy scalars, datetime.date, NaN → null."""
 
@@ -66,7 +65,6 @@ def _to_records(df: pd.DataFrame, keep: list[str] | None = None) -> list[dict]:
 # ---------------------------------------------------------------------------
 # ReportBuilder
 # ---------------------------------------------------------------------------
-
 
 class ReportBuilder:
     """
@@ -145,13 +143,13 @@ class ReportBuilder:
     def _collect(self, start, end, title: str) -> dict:
         eng = self._eng
 
-        sleep = self._safe(eng.sleep_sessions, start, end)
-        physio = self._safe(eng.nightly_physiology, start, end)
-        readiness = self._safe(eng.hrv_readiness, start, end)
-        stress_sl = self._safe(eng.stress_impact_on_sleep, start, end)
-        activity = self._safe(eng.daily_activity_profile, start, end)
-        cardiac = self._safe(eng.walking_cardiac_load, start, end, source="auto")
-        hr_daily = self._safe(eng.daily_hr_stats, start, end)
+        sleep       = self._safe(eng.sleep_sessions,        start, end)
+        physio      = self._safe(eng.nightly_physiology,    start, end)
+        readiness   = self._safe(eng.hrv_readiness,         start, end)
+        stress_sl   = self._safe(eng.stress_impact_on_sleep, start, end)
+        activity    = self._safe(eng.daily_activity_profile, start, end)
+        cardiac     = self._safe(eng.walking_cardiac_load,   start, end, source="auto")
+        hr_daily    = self._safe(eng.daily_hr_stats,         start, end)
 
         # Fix readiness baseline column to a known name
         if not readiness.empty:
@@ -174,22 +172,22 @@ class ReportBuilder:
 
         return {
             "meta": {
-                "title": title,
-                "generated_at": datetime.datetime.now().isoformat(timespec="seconds"),
+                "title":          title,
+                "generated_at":   datetime.datetime.now().isoformat(timespec="seconds"),
                 "date_range": {
                     "start": min(all_dates) if all_dates else None,
-                    "end": max(all_dates) if all_dates else None,
+                    "end":   max(all_dates) if all_dates else None,
                 },
                 "cardiac_trend": cardiac_trend,
             },
-            "sleep": _to_records(sleep),
-            "physiology": _to_records(physio),
-            "readiness": _to_records(readiness),
-            "stress_sleep": _to_records(stress_sl),
-            "activity": _to_records(activity),
-            "cardiac_bouts": cardiac_bouts,
+            "sleep":          _to_records(sleep),
+            "physiology":     _to_records(physio),
+            "readiness":      _to_records(readiness),
+            "stress_sleep":   _to_records(stress_sl),
+            "activity":       _to_records(activity),
+            "cardiac_bouts":  cardiac_bouts,
             "cardiac_rolling": cardiac_rolling,
-            "hr_daily": _to_records(hr_daily),
+            "hr_daily":       _to_records(hr_daily),
         }
 
     @staticmethod
@@ -203,15 +201,8 @@ class ReportBuilder:
         )
 
         # Per-bout records (drop the rolling col to keep payload small)
-        bout_cols = [
-            "date",
-            "duration_min",
-            "distance_m",
-            "speed_mps",
-            "mean_hr",
-            "cardiac_load",
-            "source",
-        ]
+        bout_cols = ["date", "duration_min", "distance_m", "speed_mps",
+                     "mean_hr", "cardiac_load", "source"]
         bouts = _to_records(cardiac, keep=[c for c in bout_cols if c in cardiac.columns])
 
         # Deduplicated daily rolling series

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 from typing import ClassVar
 
@@ -66,11 +67,7 @@ class BaseMetric:
         if not self.value_columns or df.empty:
             return df
         keep = set(self.value_columns) | {
-            "start_time",
-            "end_time",
-            "datauuid",
-            "time_offset",
-            "deviceuuid",
+            "start_time", "end_time", "datauuid", "time_offset", "deviceuuid"
         }
         present = [c for c in df.columns if c in keep]
         return df[present]

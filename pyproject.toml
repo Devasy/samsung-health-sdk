@@ -27,7 +27,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0", "pytest-cov", "black", "ruff", "pre-commit"]
+dev = ["pytest>=7.0", "pytest-cov", "black", "ruff"]
 ml  = ["torch>=2.0"]
 
 [project.urls]
