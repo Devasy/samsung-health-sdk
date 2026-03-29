@@ -30,6 +30,7 @@ drove today's forecast.
 Combined with gradient × input saliency (computed in InsightEngine),
 you can also identify *which features* on *which days* mattered most.
 """
+
 from __future__ import annotations
 
 import torch
@@ -59,8 +60,8 @@ class _TemporalAttention(nn.Module):
         context : Tensor (B, H)        – weighted sum of lstm_out
         weights : Tensor (B, T)        – attention weights (sum to 1 along T)
         """
-        scores = self.score(lstm_out).squeeze(-1)   # (B, T)
-        weights = F.softmax(scores, dim=-1)          # (B, T)
+        scores = self.score(lstm_out).squeeze(-1)  # (B, T)
+        weights = F.softmax(scores, dim=-1)  # (B, T)
         context = (weights.unsqueeze(-1) * lstm_out).sum(dim=1)  # (B, H)
         return context, weights
 
@@ -116,8 +117,8 @@ class HealthLSTMAttention(nn.Module):
             nn.ReLU(),
         )
 
-        self.head_sleep  = nn.Linear(32, 1)
-        self.head_hrv    = nn.Linear(32, 1)
+        self.head_sleep = nn.Linear(32, 1)
+        self.head_hrv = nn.Linear(32, 1)
         self.head_energy = nn.Linear(32, 1)
 
     def forward(self, x: torch.Tensor):
@@ -135,16 +136,16 @@ class HealthLSTMAttention(nn.Module):
             Attention distribution over the input time steps.
             Higher weight on time step t means day t was more influential.
         """
-        lstm_out, _ = self.lstm(x)                    # (B, T, 2H)
-        context, attn_w = self.attn(lstm_out)         # (B, 2H), (B, T)
-        features = self.trunk(context)                # (B, 32)
+        lstm_out, _ = self.lstm(x)  # (B, T, 2H)
+        context, attn_w = self.attn(lstm_out)  # (B, 2H), (B, T)
+        features = self.trunk(context)  # (B, 32)
 
-        sleep  = torch.sigmoid(self.head_sleep(features)).squeeze(-1)  * 100
-        hrv    = torch.sigmoid(self.head_hrv(features)).squeeze(-1)    * 100
+        sleep = torch.sigmoid(self.head_sleep(features)).squeeze(-1) * 100
+        hrv = torch.sigmoid(self.head_hrv(features)).squeeze(-1) * 100
         energy = torch.sigmoid(self.head_energy(features)).squeeze(-1) * 100
 
         return {
             "sleep_quality": sleep,
             "hrv_readiness": hrv,
-            "energy_index":  energy,
+            "energy_index": energy,
         }, attn_w

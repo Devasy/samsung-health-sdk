@@ -7,6 +7,7 @@ Install:
 Run:
     python ml_example.py
 """
+
 from samsung_health_sdk import SamsungHealthParser
 from samsung_health_sdk.features import HealthFeatureEngine
 from samsung_health_sdk.ml import (
@@ -18,8 +19,8 @@ from samsung_health_sdk.ml import (
 # ── 1. Load your Samsung Health export ────────────────────────────────────────
 EXPORT_DIR = "samsunghealth_patel.devasy.23_20250630001879"
 
-p   = SamsungHealthParser(EXPORT_DIR)
-eng = HealthFeatureEngine(p, tz_offset_hours=5.5)   # IST = UTC+5:30
+p = SamsungHealthParser(EXPORT_DIR)
+eng = HealthFeatureEngine(p, tz_offset_hours=5.5)  # IST = UTC+5:30
 
 # ── 2. Build the daily feature matrix (~23 columns, one row per day) ──────────
 print("Building daily feature matrix …")
@@ -31,8 +32,8 @@ print(df.tail(5).to_string())
 print("\nTraining HealthLSTMAttention …")
 trainer = HealthModelTrainer(
     df,
-    seq_len=14,      # 14-day look-back window
-    hidden=64,       # LSTM hidden units per direction
+    seq_len=14,  # 14-day look-back window
+    hidden=64,  # LSTM hidden units per direction
     n_layers=2,
     dropout=0.3,
     lr=1e-3,

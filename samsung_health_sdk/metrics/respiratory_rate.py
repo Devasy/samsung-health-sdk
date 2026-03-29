@@ -18,9 +18,14 @@ class RespiratoryRateMetric(BaseMetric):
 
     metric_name = "com.samsung.health.respiratory_rate"
     value_columns = [
-        "start_time", "end_time",
-        "average", "upper_limit", "lower_limit",
-        "datauuid", "deviceuuid", "time_offset",
+        "start_time",
+        "end_time",
+        "average",
+        "upper_limit",
+        "lower_limit",
+        "datauuid",
+        "deviceuuid",
+        "time_offset",
     ]
 
     def load_summary(self, start: DateLike = None, end: DateLike = None) -> pd.DataFrame:

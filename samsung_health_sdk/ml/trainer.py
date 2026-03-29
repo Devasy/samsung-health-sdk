@@ -19,6 +19,7 @@ Usage::
     # Later sessions:
     trainer2 = HealthModelTrainer.load("health_model.pt")
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -34,7 +35,7 @@ from samsung_health_sdk.ml.model import HealthLSTMAttention
 
 # Maps model output dict keys → target column order in HealthWindowDataset
 _PRED_KEYS = ["sleep_quality", "hrv_readiness", "energy_index"]
-_TGT_COLS  = ["sleep_quality_score", "hrv_readiness_score", "energy_index"]
+_TGT_COLS = ["sleep_quality_score", "hrv_readiness_score", "energy_index"]
 
 
 class HealthModelTrainer:
@@ -82,18 +83,18 @@ class HealthModelTrainer:
         # Build dataset
         full_ds = HealthWindowDataset(df, seq_len=seq_len, augment=False)
         n_total = len(full_ds)
-        n_val   = max(1, int(n_total * val_split))
+        n_val = max(1, int(n_total * val_split))
         n_train = n_total - n_val
 
         # Chronological split (no shuffle — temporal order must be preserved)
         train_indices = list(range(n_train))
-        val_indices   = list(range(n_train, n_total))
+        val_indices = list(range(n_train, n_total))
         self.train_ds = Subset(full_ds, train_indices)
-        self.val_ds   = Subset(full_ds, val_indices)
-        self.full_ds  = full_ds
+        self.val_ds = Subset(full_ds, val_indices)
+        self.full_ds = full_ds
 
         self.feature_cols = full_ds.feature_cols
-        self.target_cols  = full_ds.target_cols
+        self.target_cols = full_ds.target_cols
         n_features = len(self.feature_cols)
 
         # Device selection
@@ -115,9 +116,7 @@ class HealthModelTrainer:
             dropout=dropout,
         ).to(self.device)
 
-        self.optimizer = torch.optim.Adam(
-            self.model.parameters(), lr=lr, weight_decay=1e-4
-        )
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr, weight_decay=1e-4)
         self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             self.optimizer, mode="min", patience=15, factor=0.5, min_lr=1e-5
         )
@@ -158,9 +157,10 @@ class HealthModelTrainer:
         dict
             ``{"train_loss": [...], "val_loss": [...]}`` per epoch.
         """
-        train_loader = DataLoader(self.train_ds, batch_size=batch_size, shuffle=True,
-                                  drop_last=False)
-        val_loader   = DataLoader(self.val_ds,   batch_size=batch_size, shuffle=False)
+        train_loader = DataLoader(
+            self.train_ds, batch_size=batch_size, shuffle=True, drop_last=False
+        )
+        val_loader = DataLoader(self.val_ds, batch_size=batch_size, shuffle=False)
 
         no_improve = 0
 
@@ -200,25 +200,19 @@ class HealthModelTrainer:
 
             if v_loss < self._best_val_loss:
                 self._best_val_loss = v_loss
-                self._best_state = {
-                    k: v.cpu().clone() for k, v in self.model.state_dict().items()
-                }
+                self._best_state = {k: v.cpu().clone() for k, v in self.model.state_dict().items()}
                 no_improve = 0
             else:
                 no_improve += 1
 
             if verbose and (epoch % 20 == 0 or epoch == 1):
                 lr_now = self.optimizer.param_groups[0]["lr"]
-                print(
-                    f"Epoch {epoch:4d} │ train {t_loss:.4f} │ val {v_loss:.4f} │ "
-                    f"lr {lr_now:.6f}"
-                )
+                print(f"Epoch {epoch:4d} │ train {t_loss:.4f} │ val {v_loss:.4f} │ lr {lr_now:.6f}")
 
             if no_improve >= patience:
                 if verbose:
                     print(
-                        f"\nEarly stop at epoch {epoch} "
-                        f"(no val improvement for {patience} epochs)."
+                        f"\nEarly stop at epoch {epoch} (no val improvement for {patience} epochs)."
                     )
                 break
 
@@ -232,8 +226,7 @@ class HealthModelTrainer:
 
     def _stack_preds(self, preds: dict, batch_size: int) -> torch.Tensor:
         """Stack model output dict into (B, 3) tensor matching target column order."""
-        cols = [preds.get(k, torch.zeros(batch_size, device=self.device))
-                for k in _PRED_KEYS]
+        cols = [preds.get(k, torch.zeros(batch_size, device=self.device)) for k in _PRED_KEYS]
         return torch.stack(cols, dim=1)
 
     # ------------------------------------------------------------------
@@ -253,18 +246,18 @@ class HealthModelTrainer:
                 "model_state": self.model.state_dict(),
                 "model_config": {
                     "n_features": self.model.n_features,
-                    "seq_len":    self.model.seq_len,
-                    "hidden":     self.model.hidden,
-                    "n_layers":   self.model.lstm.num_layers,
-                    "dropout":    self.model.lstm.dropout,
+                    "seq_len": self.model.seq_len,
+                    "hidden": self.model.hidden,
+                    "n_layers": self.model.lstm.num_layers,
+                    "dropout": self.model.lstm.dropout,
                 },
                 "feature_cols": self.feature_cols,
-                "target_cols":  self.target_cols,
-                "feat_min":     self.full_ds.feat_min.to_dict(),
-                "feat_max":     self.full_ds.feat_max.to_dict(),
-                "tgt_min":      self.full_ds.tgt_min.to_dict(),
-                "tgt_max":      self.full_ds.tgt_max.to_dict(),
-                "history":      self.history,
+                "target_cols": self.target_cols,
+                "feat_min": self.full_ds.feat_min.to_dict(),
+                "feat_max": self.full_ds.feat_max.to_dict(),
+                "tgt_min": self.full_ds.tgt_min.to_dict(),
+                "tgt_max": self.full_ds.tgt_max.to_dict(),
+                "history": self.history,
                 "best_val_loss": self._best_val_loss,
             },
             path,
@@ -288,7 +281,7 @@ class HealthModelTrainer:
             Target device.  Auto-detected when None.
         """
         ckpt = torch.load(path, map_location="cpu", weights_only=True)
-        cfg  = ckpt["model_config"]
+        cfg = ckpt["model_config"]
 
         model = HealthLSTMAttention(**cfg)
         model.load_state_dict(ckpt["model_state"])
@@ -304,17 +297,18 @@ class HealthModelTrainer:
 
         # Build a minimal trainer shell (no dataset)
         trainer = object.__new__(cls)
-        trainer.model        = model
-        trainer.device       = torch.device(device)
+        trainer.model = model
+        trainer.device = torch.device(device)
         trainer.feature_cols = ckpt["feature_cols"]
-        trainer.target_cols  = ckpt["target_cols"]
-        trainer.history      = ckpt.get("history", {})
+        trainer.target_cols = ckpt["target_cols"]
+        trainer.history = ckpt.get("history", {})
         trainer._best_val_loss = ckpt.get("best_val_loss", float("inf"))
-        trainer._best_state    = None
-        trainer.df             = None
-        trainer.seq_len        = cfg["seq_len"]
+        trainer._best_state = None
+        trainer.df = None
+        trainer.seq_len = cfg["seq_len"]
         # Reconstruct normalisation Series so InsightEngine can use them
         import pandas as pd
+
         trainer._feat_min = pd.Series(ckpt["feat_min"])
         trainer._feat_max = pd.Series(ckpt["feat_max"])
         return trainer
@@ -356,8 +350,8 @@ class HealthModelTrainer:
             # Predictions and true values are in normalised [0,1] space
             # — multiply by original range to get MAE in original units
             scale = float(tgt_range.get(col, 1.0))
-            mae  = float(np.mean(np.abs(pred_arr[:, i] - true_arr[:, i])) * scale)
-            rmse = float(np.sqrt(np.mean((pred_arr[:, i] - true_arr[:, i])**2)) * scale)
+            mae = float(np.mean(np.abs(pred_arr[:, i] - true_arr[:, i])) * scale)
+            rmse = float(np.sqrt(np.mean((pred_arr[:, i] - true_arr[:, i]) ** 2)) * scale)
             results[key] = {"mae": round(mae, 2), "rmse": round(rmse, 2)}
 
         return results

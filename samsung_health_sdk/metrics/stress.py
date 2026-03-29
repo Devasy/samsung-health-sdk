@@ -17,8 +17,16 @@ class StressMetric(BaseMetric):
     """
 
     metric_name = "com.samsung.shealth.stress"
-    value_columns = ["start_time", "end_time", "score", "min", "max",
-                     "datauuid", "deviceuuid", "time_offset"]
+    value_columns = [
+        "start_time",
+        "end_time",
+        "score",
+        "min",
+        "max",
+        "datauuid",
+        "deviceuuid",
+        "time_offset",
+    ]
 
     def load_summary(self, start: DateLike = None, end: DateLike = None) -> pd.DataFrame:
         df = super().load_summary(start, end)
