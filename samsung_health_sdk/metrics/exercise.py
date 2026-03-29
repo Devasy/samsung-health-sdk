@@ -51,43 +51,24 @@ class ExerciseMetric(BaseMetric):
 
     metric_name = "com.samsung.shealth.exercise"
     value_columns = [
-        "start_time",
-        "end_time",
-        "exercise_type",
-        "duration",
-        "distance",
-        "calorie",
-        "mean_heart_rate",
-        "max_heart_rate",
-        "min_heart_rate",
-        "mean_speed",
-        "max_speed",
-        "mean_cadence",
-        "max_cadence",
+        "start_time", "end_time",
+        "exercise_type", "duration",
+        "distance", "calorie",
+        "mean_heart_rate", "max_heart_rate", "min_heart_rate",
+        "mean_speed", "max_speed",
+        "mean_cadence", "max_cadence",
         "vo2_max",
-        "altitude_gain",
-        "altitude_loss",
-        "datauuid",
-        "deviceuuid",
-        "time_offset",
+        "altitude_gain", "altitude_loss",
+        "datauuid", "deviceuuid", "time_offset",
     ]
 
     def load_summary(self, start: DateLike = None, end: DateLike = None) -> pd.DataFrame:
         df = super().load_summary(start, end)
         numeric_cols = [
-            "duration",
-            "distance",
-            "calorie",
-            "mean_heart_rate",
-            "max_heart_rate",
-            "min_heart_rate",
-            "mean_speed",
-            "max_speed",
-            "mean_cadence",
-            "max_cadence",
-            "vo2_max",
-            "altitude_gain",
-            "altitude_loss",
+            "duration", "distance", "calorie",
+            "mean_heart_rate", "max_heart_rate", "min_heart_rate",
+            "mean_speed", "max_speed", "mean_cadence", "max_cadence",
+            "vo2_max", "altitude_gain", "altitude_loss",
         ]
         for col in numeric_cols:
             if col in df.columns:

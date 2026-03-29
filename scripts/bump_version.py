@@ -27,8 +27,8 @@ def read_version(text: str) -> tuple[int, int, int]:
 
 
 def write_version(text: str, major: int, minor: int, patch: int) -> str:
-    new_ver = f"{major}.{minor}.{patch}"
-    return VERSION_RE.sub(lambda m: f"{m.group(1)}{new_ver}{m.group(5)}", text)
+    new_ver = f'{major}.{minor}.{patch}'
+    return VERSION_RE.sub(lambda m: f'{m.group(1)}{new_ver}{m.group(5)}', text)
 
 
 def main() -> None:

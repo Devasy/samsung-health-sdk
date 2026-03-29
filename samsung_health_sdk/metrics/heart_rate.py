@@ -17,16 +17,8 @@ class HeartRateMetric(BaseMetric):
     """
 
     metric_name = "com.samsung.shealth.tracker.heart_rate"
-    value_columns = [
-        "start_time",
-        "end_time",
-        "heart_rate",
-        "min",
-        "max",
-        "datauuid",
-        "deviceuuid",
-        "time_offset",
-    ]
+    value_columns = ["start_time", "end_time", "heart_rate", "min", "max",
+                     "datauuid", "deviceuuid", "time_offset"]
 
     def load_summary(self, start: DateLike = None, end: DateLike = None) -> pd.DataFrame:
         df = super().load_summary(start, end)

@@ -111,16 +111,9 @@ class SamsungHealthParser:
         if metric not in self._metric_instances:
             # Check if a typed class covers this metric
             typed_classes: list[type[BaseMetric]] = [
-                HeartRateMetric,
-                SleepStageMetric,
-                SkinTemperatureMetric,
-                StressMetric,
-                SpO2Metric,
-                HRVMetric,
-                StepsMetric,
-                RespiratoryRateMetric,
-                ExerciseMetric,
-                MovementMetric,
+                HeartRateMetric, SleepStageMetric, SkinTemperatureMetric,
+                StressMetric, SpO2Metric, HRVMetric, StepsMetric,
+                RespiratoryRateMetric, ExerciseMetric, MovementMetric,
             ]
             for cls in typed_classes:
                 if cls.metric_name == metric:
@@ -129,8 +122,8 @@ class SamsungHealthParser:
             else:
                 # Generic fallback
                 instance = BaseMetric.__new__(BaseMetric)
-                instance.metric_name = metric  # type: ignore[assignment]
-                instance.value_columns = []  # type: ignore[assignment]
+                instance.metric_name = metric          # type: ignore[assignment]
+                instance.value_columns = []            # type: ignore[assignment]
                 instance._data_dir = self._data_dir
                 instance._csv_path = self._metric_map[metric]
                 instance._summary_cache = None

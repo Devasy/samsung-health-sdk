@@ -16,26 +16,16 @@ class SkinTemperatureMetric(BaseMetric):
 
     metric_name = "com.samsung.health.skin_temperature"
     value_columns = [
-        "start_time",
-        "end_time",
-        "temperature",
-        "min",
-        "max",
-        "baseline",
-        "stat_n",
-        "stat_m1",
-        "stat_m2",
-        "lower_bound",
-        "upper_bound",
-        "datauuid",
-        "deviceuuid",
-        "time_offset",
+        "start_time", "end_time",
+        "temperature", "min", "max", "baseline",
+        "stat_n", "stat_m1", "stat_m2",
+        "lower_bound", "upper_bound",
+        "datauuid", "deviceuuid", "time_offset",
     ]
 
     def load_summary(self, start: DateLike = None, end: DateLike = None):
         df = super().load_summary(start, end)
         import pandas as pd
-
         for col in ("temperature", "min", "max", "baseline", "stat_n"):
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors="coerce")
