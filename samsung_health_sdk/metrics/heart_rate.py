@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 
 from samsung_health_sdk.metrics.base import BaseMetric
 from samsung_health_sdk.utils import DateLike

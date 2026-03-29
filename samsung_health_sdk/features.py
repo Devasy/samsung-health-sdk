@@ -35,7 +35,7 @@ daily_activity_profile()  Per-day: sedentary/light/moderate/vigorous minute coun
 from __future__ import annotations
 
 import warnings
-from typing import Literal
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -1004,7 +1004,7 @@ class HealthFeatureEngine:
         start: DateLike = None,
         end: DateLike = None,
         title: str = "Samsung Health Dashboard",
-    ) -> "Path":
+    ) -> Any:
         """
         Generate a self-contained HTML dashboard and write it to *output_path*.
 
@@ -1033,5 +1033,4 @@ class HealthFeatureEngine:
                                start="2024-11-01", end="2025-06-30")
         """
         from samsung_health_sdk.report.builder import ReportBuilder
-        from pathlib import Path
         return ReportBuilder(self).build(output_path, start=start, end=end, title=title)

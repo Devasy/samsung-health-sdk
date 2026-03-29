@@ -403,9 +403,12 @@ def _load_sleep_signals(
 
     # ── Combine available signals ─────────────────────────────────────
     available: dict[str, pd.Series] = {}
-    if hr_min  is not None: available["heart_rate"]       = hr_min
-    if mv_min  is not None: available["activity_level"]   = mv_min
-    if rr_min  is not None: available["respiratory_rate"] = rr_min
+    if hr_min is not None:
+        available["heart_rate"] = hr_min
+    if mv_min is not None:
+        available["activity_level"] = mv_min
+    if rr_min is not None:
+        available["respiratory_rate"] = rr_min
     signal_cols = list(available.keys())
 
     combined = pd.DataFrame(available).sort_index()

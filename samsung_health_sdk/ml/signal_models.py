@@ -39,7 +39,6 @@ SignalAnomalyEngine
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -50,7 +49,6 @@ from torch.utils.data import DataLoader, Subset
 from samsung_health_sdk.ml.signal_dataset import (
     MinuteLevelDataset,
     SleepWindowDataset,
-    SLEEP_SIGNALS,
 )
 
 
@@ -841,7 +839,6 @@ class SignalAnomalyEngine:
     ) -> "SignalAnomalyEngine":
         """Load previously saved models."""
         sae = cls(engine, device=device)
-        p = Path(prefix)
         waking_path = Path(f"{prefix}_waking.pt")
         sleep_path  = Path(f"{prefix}_sleep.pt")
         if waking_path.exists():
