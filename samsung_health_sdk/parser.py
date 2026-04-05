@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
+
+if TYPE_CHECKING:
+    from samsung_health_sdk.exercise_analysis import RunAnalysis
 
 import pandas as pd
 
@@ -267,10 +270,56 @@ class SamsungHealthParser:
         Exercise sessions.
 
         Columns include: start_time, end_time, exercise_type, exercise_name,
-        duration_sec, distance, calorie, mean_heart_rate, max_heart_rate,
-        mean_speed, vo2_max, altitude_gain, altitude_loss.
+        duration_sec, duration_min, distance_km, speed_kmh, pace_min_per_km,
+        calorie, mean_heart_rate, max_heart_rate, mean_speed, vo2_max,
+        altitude_gain, altitude_loss, beats_per_km.
         """
         return ExerciseMetric(self._data_dir).load_summary(start, end)
+
+    def get_runs(
+        self,
+        start: DateLike = None,
+        end: DateLike = None,
+        min_distance_km: float = 0.5,
+    ) -> pd.DataFrame:
+        """
+        Outdoor running sessions only (exercise_type 1002), deduplicated.
+
+        Duplicate records from companion apps (e.g. Google Fit) are removed;
+        the Samsung Health record with the richest HR data is kept.
+
+        Columns include: start_time, end_time, duration_min, distance_km,
+        pace_min_per_km, speed_kmh, mean_heart_rate, max_heart_rate,
+        mean_cadence, vo2_max, beats_per_km, calorie, altitude_gain, datauuid.
+        """
+        return ExerciseMetric(self._data_dir).load_runs(start, end, min_distance_km=min_distance_km)
+
+    def get_run_analysis(self, tz: str = "Asia/Kolkata") -> "RunAnalysis":
+        """
+        Return a :class:`RunAnalysis` instance for this export.
+
+        The RunAnalysis object provides cross-run comparison, per-run time
+        series (HR, pace, cadence, beats_per_m), HR zones, and the
+        beats_per_km efficiency trend.
+
+        Parameters
+        ----------
+        tz : str
+            Timezone for display formatting (default ``"Asia/Kolkata"`` = IST).
+
+        Example
+        -------
+        ::
+
+            ra    = parser.get_run_analysis()
+            table = ra.compare_runs("2026-01-01", "2026-12-31")
+            ts    = ra.run_timeseries(table.loc[0, "datauuid"])
+            zones = ra.hr_zones(table.loc[0, "datauuid"])
+            trend = ra.beats_per_km_trend("2026-01-01")
+        """
+        from samsung_health_sdk.exercise_analysis import RunAnalysis
+
+        return RunAnalysis(self, tz=tz)
 
     def get_movement(
         self,
