@@ -312,7 +312,7 @@ class ExerciseMetric(BaseMetric):
             df["elapsed_sec"] = (df["start_time"] - t0).dt.total_seconds()
             df["elapsed_min"] = df["elapsed_sec"] / 60.0
 
-        # beats_per_m = HR (bps) / speed (m/s)  = (HR/60) / speed
+        # beats_per_m = HR (bpm) / speed (m/s)  = (HR/60) / speed
         if "heart_rate" in df.columns and "speed" in df.columns:
             safe_speed = df["speed"].replace(0, float("nan"))
             df["beats_per_m"] = df["heart_rate"] / (60.0 * safe_speed)
