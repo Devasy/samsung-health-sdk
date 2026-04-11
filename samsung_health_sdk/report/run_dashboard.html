@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Running Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080d18;--surf:#0f1728;--surf2:#162035;--border:#1e2d45;
+  --text:#e2e8f0;--muted:#64748b;--muted2:#475569;
+  --blue:#60a5fa;--green:#34d399;--purple:#a78bfa;
+  --orange:#fbbf24;--red:#f87171;--teal:#2dd4bf;--indigo:#818cf8;
+}
+body{background:var(--bg);color:var(--text);font-family:Inter,'Segoe UI',system-ui,sans-serif;font-size:13px;line-height:1.5;min-height:100vh}
+#app{max-width:1440px;margin:0 auto;padding:24px 20px 64px}
+
+.header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:8px;padding-bottom:16px;margin-bottom:24px;border-bottom:1px solid var(--border)}
+.header h1{font-size:22px;font-weight:700;letter-spacing:-.4px}
+.header .sub{color:var(--muted);font-size:11px;margin-top:4px}
+.header .gen{color:var(--muted);font-size:11px}
+
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:24px}
+.kpi-card{background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
+.kpi-card .label{color:var(--muted);font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.05em}
+.kpi-card .value{font-size:24px;font-weight:700;margin-top:4px;line-height:1.1}
+.kpi-card .hint{color:var(--muted);font-size:10px;margin-top:3px}
+
+.tab-nav{display:flex;gap:0;margin-bottom:24px;border-bottom:1px solid var(--border)}
+.tab-btn{background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);
+  font-size:13px;font-weight:500;padding:10px 18px;cursor:pointer;margin-bottom:-1px;transition:color .15s,border-color .15s}
+.tab-btn.active{color:var(--blue);border-bottom-color:var(--blue)}
+.tab-btn:hover:not(.active){color:var(--text)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+
+.section{background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:20px}
+.section-title{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px}
+
+.chart-row{display:grid;gap:16px;margin-bottom:20px}
+.chart-row.two{grid-template-columns:1fr 1fr}
+@media(max-width:900px){.chart-row.two{grid-template-columns:1fr}}
+.chart-box{background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:16px}
+.chart-box .ct{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px}
+
+#runs-table-wrap{overflow-x:auto;margin-bottom:4px}
+table{width:100%;border-collapse:collapse}
+thead th{background:var(--surf2);color:var(--muted);font-size:11px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.04em;padding:8px 12px;text-align:right;
+  border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap;user-select:none}
+thead th:first-child,thead th:nth-child(2){text-align:left}
+thead th:hover{color:var(--text)}
+thead th.sorted{color:var(--blue)}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s;cursor:pointer}
+tbody tr:hover{background:var(--surf2)}
+tbody tr.selected{background:#1a2744;border-left:3px solid var(--blue)}
+td{padding:9px 12px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td:first-child,td:nth-child(2){text-align:left}
+
+.detail-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.detail-header .run-title{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.detail-header .run-sub{color:var(--muted);font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#run-select{background:var(--surf2);border:1px solid var(--border);color:var(--text);
+  padding:6px 10px;border-radius:6px;font-size:12px;cursor:pointer;outline:none;
+  max-width:260px;min-width:160px;flex-shrink:0}
+
+.detail-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:20px}
+.dkpi{background:var(--surf2);border-radius:8px;padding:12px 14px}
+.dkpi .dl{color:var(--muted);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.dkpi .dv{font-size:19px;font-weight:700;margin-top:3px;line-height:1}
+.dkpi .du{color:var(--muted);font-size:10px;margin-top:2px}
+
+.c-blue{color:var(--blue)}.c-green{color:var(--green)}.c-orange{color:var(--orange)}
+.c-purple{color:var(--purple)}.c-teal{color:var(--teal)}.c-red{color:var(--red)}
+.c-indigo{color:var(--indigo)}.c-yellow{color:#facc15}.c-muted{color:#94a3b8}
+#run-map{height:380px;border-radius:6px;overflow:hidden}
+.leaflet-container{background:#0f1728 !important}
+.km-toggle{background:transparent;border:1px solid var(--border);color:var(--muted);
+  font-size:10px;font-weight:600;padding:4px 10px;border-radius:5px;cursor:pointer;
+  text-transform:uppercase;letter-spacing:.05em;transition:color .15s,border-color .15s,background .15s}
+.km-toggle:hover{color:var(--text)}
+.km-toggle.active{background:rgba(96,165,250,.12);border-color:var(--blue);color:var(--blue)}
+.chart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.chart-header .ct{margin-bottom:0}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="header">
+    <div>
+      <h1 id="dash-title">Running Dashboard</h1>
+      <div class="sub" id="dash-period"></div>
+    </div>
+    <div class="gen" id="dash-gen"></div>
+  </div>
+
+  <div class="kpi-row" id="global-kpis"></div>
+
+  <div class="tab-nav">
+    <button type="button" class="tab-btn active" data-tab="overview" onclick="switchTab('overview')">All Runs</button>
+    <button type="button" class="tab-btn" data-tab="detail" onclick="switchTab('detail')">Run Detail</button>
+    <button type="button" class="tab-btn" data-tab="compare" onclick="switchTab('compare')">Compare 2 Runs</button>
+  </div>
+
+  <!-- ALL RUNS TAB -->
+  <div id="tab-overview" class="tab-panel active">
+    <div class="section">
+      <div class="section-title">Run History — click any row to open detail</div>
+      <div id="runs-table-wrap">
+        <table>
+          <thead id="runs-thead"></thead>
+          <tbody id="runs-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="chart-box" style="margin-bottom:20px">
+      <div class="ct">Beats / km Trend <span style="color:var(--muted);font-weight:400;text-transform:none">(lower = more efficient)</span></div>
+      <div id="chart-trend" style="height:280px"></div>
+    </div>
+  </div>
+
+  <!-- RUN DETAIL TAB -->
+  <div id="tab-detail" class="tab-panel">
+    <div class="detail-header">
+      <div>
+        <div class="run-title" id="detail-run-title">Select a run</div>
+        <div class="run-sub" id="detail-run-sub"></div>
+      </div>
+      <select id="run-select" onchange="selectRun(this.value)"></select>
+    </div>
+
+    <div class="detail-kpis" id="detail-kpis"></div>
+
+    <div class="chart-row two">
+      <div class="chart-box" style="height:300px">
+        <div class="ct">Heart Rate Zones</div>
+        <div id="chart-zones" style="height:240px"></div>
+      </div>
+      <div class="chart-box" style="height:300px">
+        <div class="ct">Pace per 5-min Segment</div>
+        <div id="chart-pace" style="height:240px"></div>
+      </div>
+    </div>
+
+    <div class="chart-box" style="margin-bottom:16px">
+      <div class="ct">Elevation Profile &amp; Grade-Adjusted Pace <span style="color:var(--muted);font-weight:400;text-transform:none">(Minetti model)</span></div>
+      <div id="chart-elev" style="height:220px"></div>
+    </div>
+
+    <div class="chart-box" style="margin-bottom:16px">
+      <div class="chart-header">
+        <div class="ct">Heart Rate, Speed &amp; Cadence</div>
+        <button type="button" id="km-toggle" class="km-toggle" onclick="toggleKmMarkers()">⊞ km marks</button>
+      </div>
+      <div id="chart-ts" style="height:280px"></div>
+    </div>
+
+    <div class="chart-box" style="margin-bottom:16px">
+      <div class="ct">Beats / metre <span style="color:var(--muted);font-weight:400;text-transform:none">(30-sec rolling avg)</span></div>
+      <div id="chart-bpm" style="height:220px"></div>
+    </div>
+
+    <div class="chart-box">
+      <div class="ct">GPS Route</div>
+      <div id="run-map"></div>
+    </div>
+  </div>
+
+  <!-- COMPARE TAB -->
+  <div id="tab-compare" class="tab-panel">
+    <div style="display:flex;gap:20px;align-items:flex-end;margin-bottom:20px;flex-wrap:wrap">
+      <div>
+        <div style="color:var(--muted);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Run A</div>
+        <select id="cmp-a" style="background:var(--surf2);border:1px solid var(--border);color:#f87171;padding:7px 12px;border-radius:6px;font-size:12px;cursor:pointer;outline:none;min-width:220px" onchange="renderCompare()"></select>
+      </div>
+      <div style="color:var(--muted);font-size:20px;font-weight:300;padding-bottom:4px">vs</div>
+      <div>
+        <div style="color:var(--muted);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Run B</div>
+        <select id="cmp-b" style="background:var(--surf2);border:1px solid var(--border);color:#60a5fa;padding:7px 12px;border-radius:6px;font-size:12px;cursor:pointer;outline:none;min-width:220px" onchange="renderCompare()"></select>
+      </div>
+    </div>
+
+    <div id="cmp-kpis" style="margin-bottom:20px"></div>
+
+    <div class="chart-box" style="margin-bottom:16px">
+      <div class="ct">Heart Rate Comparison</div>
+      <div id="chart-cmp-hr" style="height:260px"></div>
+    </div>
+
+    <div class="chart-row two">
+      <div class="chart-box">
+        <div class="ct">Speed (km/h)</div>
+        <div id="chart-cmp-spd" style="height:220px"></div>
+      </div>
+      <div class="chart-box">
+        <div class="ct">Cadence (spm)</div>
+        <div id="chart-cmp-cad" style="height:220px"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script>
+const D = /*__RUN_DATA__*/null/**/;
+let _charts = {}, _sortKey = 'date', _sortAsc = false, _selectedUuid = null;
+let _showKmMarkers = false, _leafletMap = null;
+
+// Single debounced resize handler — registered once, covers all charts.
+(function(){
+  let _rt; window.addEventListener('resize',()=>{clearTimeout(_rt);_rt=setTimeout(()=>{
+    Object.values(_charts).forEach(c=>c&&c.resize());
+    if(_leafletMap)_leafletMap.invalidateSize();
+  },120);});
+})();
+
+// ── helpers ──────────────────────────────────────────────────────────────────
+const fmt   = (v, d=1) => v == null ? '–' : (+v).toFixed(d);
+const fmtHR = v => v == null ? '–' : Math.round(+v) + ' bpm';
+const fmtKm = v => v == null ? '–' : fmt(v,2) + ' km';
+
+// Format elapsed seconds as mm:ss or h:mm:ss (skip hours for runs < 1 h)
+function fmtElapsed(sec){
+  if(sec==null||!Number.isFinite(+sec))return'0:00';
+  const s=Math.round(+sec);
+  const hh=Math.floor(s/3600), mm=Math.floor((s%3600)/60), ss=s%60;
+  if(hh>0)return`${hh}:${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+  return`${mm}:${String(ss).padStart(2,'0')}`;
+}
+// Format duration_min (float) as h:mm:ss / mm:ss
+const fmtDur = v => v==null?'–':fmtElapsed(Math.round(+v*60));
+// Convert speed km/h → pace string "M:SS /km"
+function speedToPace(kmh){
+  if(!kmh||+kmh<0.5)return'–';
+  const mpk=60/+kmh, m=Math.floor(mpk), s=Math.round((mpk-m)*60);
+  return s===60?`${m+1}:00 /km`:`${m}:${String(s).padStart(2,'0')} /km`;
+}
+// Km-marker helpers
+function _computeKmMarks(ts){
+  const marks=[]; if(!ts||!ts.length)return marks;
+  let next=1;
+  for(const r of ts){
+    if(r.distance_cumulative_km==null||r.elapsed_sec==null)continue;
+    if(r.distance_cumulative_km>=next){marks.push({km:next,sec:r.elapsed_sec});next++;}
+  }
+  return marks;
+}
+function toggleKmMarkers(){
+  _showKmMarkers=!_showKmMarkers;
+  const btn=document.getElementById('km-toggle');
+  if(btn)btn.classList.toggle('active',_showKmMarkers);
+  const live=D.live&&D.live[_selectedUuid];
+  renderTS(live?live.timeseries:[]);
+  if(_leafletMap){const live2=D.live&&D.live[_selectedUuid];renderMap(live2?live2.gps_track:[],live2?live2.timeseries:[]);}
+}
+
+// ── boot ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  if (!D) { document.body.innerHTML='<p style="color:#f87171;padding:40px">No data.</p>'; return; }
+  document.getElementById('dash-title').textContent = D.meta.title || 'Running Dashboard';
+  document.getElementById('dash-gen').textContent = 'Generated ' + (D.meta.generated_at||'').replace('T',' ');
+  const dates = (D.runs||[]).map(r=>r.date).filter(Boolean);
+  if (dates.length) document.getElementById('dash-period').textContent = dates[0].slice(0,10)+' – '+dates[dates.length-1].slice(0,10);
+  renderGlobalKpis();
+  renderRunsTable();
+  renderTrendChart();
+  const best = (D.runs||[]).find(r=>D.live&&D.live[r.datauuid]) || (D.runs||[])[D.runs.length-1];
+  if (best) populateRunSelector(best.datauuid);
+  populateCompareSelectors();
+});
+
+// ── global KPIs ──────────────────────────────────────────────────────────────
+function renderGlobalKpis(){
+  const k=D.kpis||{};
+  const cards=[
+    {label:'Total Runs',   value:k.total_runs,                            cls:'c-blue'},
+    {label:'Distance',     value:(k.total_distance_km||0)+' km',          cls:'c-green'},
+    {label:'Avg Beats/km', value:fmt(k.avg_beats_per_km,0), hint:'efficiency index', cls:'c-orange'},
+    {label:'Best Pace',    value:k.best_pace||'–',          hint:'fastest avg pace',  cls:'c-teal'},
+  ];
+  document.getElementById('global-kpis').innerHTML=cards.map(c=>
+    `<div class="kpi-card"><div class="label">${c.label}</div><div class="value ${c.cls}">${c.value??'–'}</div><div class="hint">${c.hint||''}</div></div>`
+  ).join('');
+}
+
+// ── runs table ───────────────────────────────────────────────────────────────
+const COLS=[
+  {k:'date',        l:'Date',     f:v=>v?v.slice(0,16):'–',           r:false},
+  {k:'distance_km', l:'Distance', f:v=>fmtKm(v),                       r:true},
+  {k:'duration_min',l:'Duration', f:v=>fmtDur(v),                      r:true},
+  {k:'pace',        l:'Pace',     f:v=>v||'–',                         r:true, sortKey:'pace_min_per_km'},
+  {k:'speed_kmh',   l:'Speed',    f:v=>v==null?'–':fmt(v,1)+' km/h',   r:true},
+  {k:'mean_hr',     l:'Avg HR',   f:v=>fmtHR(v),                       r:true},
+  {k:'max_hr',      l:'Max HR',   f:v=>fmtHR(v),                       r:true},
+  {k:'mean_cadence',l:'Cadence',  f:v=>v==null?'–':fmt(v,0)+' spm',    r:true},
+  {k:'beats_per_km',l:'Beats/km', f:v=>fmt(v,0),                       r:true},
+  {k:'calories',    l:'Calories', f:v=>v==null?'–':fmt(v,0)+' kcal',   r:true},
+];
+
+function renderRunsTable(){
+  const dataKey=COLS.find(c=>c.k===_sortKey)?.sortKey||_sortKey;
+  const sorted=[...D.runs].sort((a,b)=>{
+    let av=a[dataKey],bv=b[dataKey];
+    if(av==null)return 1; if(bv==null)return -1;
+    return _sortAsc?(av>bv?1:-1):(av<bv?1:-1);
+  });
+  document.getElementById('runs-thead').innerHTML='<tr>'+COLS.map(c=>
+    `<th onclick="sortTbl('${c.k}')" style="text-align:${c.r?'right':'left'}" class="${_sortKey===c.k?'sorted':''}">${c.l}</th>`
+  ).join('')+'</tr>';
+  document.getElementById('runs-tbody').innerHTML=sorted.map(r=>
+    `<tr onclick="rowClick('${r.datauuid}')" id="row-${r.datauuid}" class="${r.datauuid===_selectedUuid?'selected':''}">` +
+    COLS.map(c=>`<td style="text-align:${c.r?'right':'left'}">${c.f(r[c.k])}</td>`).join('') +
+    '</tr>'
+  ).join('');
+}
+
+function sortTbl(k){ _sortKey===k?(_sortAsc=!_sortAsc):(_sortKey=k,_sortAsc=false); renderRunsTable(); }
+function rowClick(uuid){ switchTab('detail'); selectRun(uuid); }
+
+// ── tabs ─────────────────────────────────────────────────────────────────────
+function switchTab(name){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  document.querySelector(`[data-tab="${name}"]`).classList.add('active');
+  setTimeout(()=>{Object.values(_charts).forEach(c=>c&&c.resize());if(_leafletMap)_leafletMap.invalidateSize();},60);
+}
+
+// ── run selector ─────────────────────────────────────────────────────────────
+function populateRunSelector(defUuid){
+  document.getElementById('run-select').innerHTML=(D.runs||[]).map(r=>
+    `<option value="${r.datauuid}" ${r.datauuid===defUuid?'selected':''}>${(r.date||'').slice(0,16)} — ${r.distance_km!=null?r.distance_km.toFixed(1):'?'}km</option>`
+  ).join('');
+  selectRun(defUuid);
+}
+
+function selectRun(uuid){
+  _selectedUuid=uuid;
+  const run=(D.runs||[]).find(r=>r.datauuid===uuid); if(!run)return;
+  document.querySelectorAll('tbody tr').forEach(tr=>tr.classList.remove('selected'));
+  const row=document.getElementById('row-'+uuid); if(row)row.classList.add('selected');
+  document.getElementById('run-select').value=uuid;
+  document.getElementById('detail-run-title').textContent=((run.date||'').slice(0,16)||'Run');
+  document.getElementById('detail-run-sub').textContent=[fmtKm(run.distance_km),fmtDur(run.duration_min),run.pace||''].filter(Boolean).join(' · ');
+  renderDetailKpis(run);
+  const live=D.live&&D.live[uuid];
+  renderZones(live?live.zones:[]);
+  renderPace(live?live.pace_breakdown:[]);
+  const _ts=live?live.timeseries:[];
+  renderAltGAP(_ts);
+  renderTS(_ts);
+  renderBpm(_ts);
+  renderMap(live?live.gps_track:[], _ts);
+}
+
+// ── compare runs ─────────────────────────────────────────────────────────────
+function _runsWithLiveSeries(){
+  return (D.runs||[]).filter(r=>{
+    const ts=D.live&&D.live[r.datauuid]&&D.live[r.datauuid].timeseries;
+    return Array.isArray(ts)&&ts.length>0;
+  });
+}
+
+function populateCompareSelectors(){
+  const selA=document.getElementById('cmp-a');
+  const selB=document.getElementById('cmp-b');
+  const kpiEl=document.getElementById('cmp-kpis');
+  if(!selA||!selB||!kpiEl)return;
+
+  const runs=_runsWithLiveSeries();
+  if(!runs.length){
+    selA.innerHTML='<option value="">No runs with live data</option>';
+    selB.innerHTML='<option value="">No runs with live data</option>';
+    kpiEl.innerHTML='<div class="section">No runs with live data are available for comparison.</div>';
+    renderCompare();
+    return;
+  }
+
+  const options=runs.map(r=>{
+    const dt=(r.date||'').slice(0,16);
+    const dist=r.distance_km!=null?`${r.distance_km.toFixed(2)} km`:'? km';
+    return `<option value="${r.datauuid}">${dt} — ${dist}</option>`;
+  }).join('');
+  selA.innerHTML=options;
+  selB.innerHTML=options;
+
+  const latestIndex=runs.length-1;
+  selA.value=runs[latestIndex].datauuid;
+  selB.value=runs[Math.max(0,latestIndex-1)].datauuid;
+  renderCompare();
+}
+
+function renderCompare(){
+  const selA=document.getElementById('cmp-a');
+  const selB=document.getElementById('cmp-b');
+  const kpiEl=document.getElementById('cmp-kpis');
+  if(!selA||!selB||!kpiEl)return;
+
+  let uuidA=selA.value;
+  let uuidB=selB.value;
+  const runs=_runsWithLiveSeries();
+  if(uuidA&&uuidB&&uuidA===uuidB&&runs.length>1){
+    const alt=runs.find(r=>r.datauuid!==uuidA);
+    if(alt){ uuidB=alt.datauuid; selB.value=uuidB; }
+  }
+
+  const runA=(D.runs||[]).find(r=>r.datauuid===uuidA);
+  const runB=(D.runs||[]).find(r=>r.datauuid===uuidB);
+  const liveA=D.live&&D.live[uuidA];
+  const liveB=D.live&&D.live[uuidB];
+
+  if(!runA||!runB||!liveA||!liveB){
+    kpiEl.innerHTML='<div class="section">Select two runs to compare.</div>';
+    _setEmptyCompareChart('cmpHr','chart-cmp-hr','No comparison data');
+    _setEmptyCompareChart('cmpSpd','chart-cmp-spd','No comparison data');
+    _setEmptyCompareChart('cmpCad','chart-cmp-cad','No comparison data');
+    return;
+  }
+
+  renderCompareKpis(runA,runB);
+  const labelA=`Run A (${(runA.date||'').slice(5,16)})`;
+  const labelB=`Run B (${(runB.date||'').slice(5,16)})`;
+
+  _renderCompareMetric('cmpHr','chart-cmp-hr',liveA.timeseries||[],liveB.timeseries||[],{
+    title:'Heart Rate', field:'heart_rate', unit:'bpm', minValue:1,
+    colorA:'#f87171', colorB:'#60a5fa', labelA, labelB,
+  });
+  _renderCompareMetric('cmpSpd','chart-cmp-spd',liveA.timeseries||[],liveB.timeseries||[],{
+    title:'Speed', field:'speed_kmh', unit:'km/h', minValue:0.5,
+    colorA:'#f59e0b', colorB:'#38bdf8', labelA, labelB,
+  });
+  _renderCompareMetric('cmpCad','chart-cmp-cad',liveA.timeseries||[],liveB.timeseries||[],{
+    title:'Cadence', field:'cadence', unit:'spm', minValue:1,
+    colorA:'#a78bfa', colorB:'#22d3ee', labelA, labelB,
+  });
+}
+
+function renderCompareKpis(runA,runB){
+  const rows=[
+    ['Distance',fmtKm(runA.distance_km),fmtKm(runB.distance_km)],
+    ['Duration',fmtDur(runA.duration_min),fmtDur(runB.duration_min)],
+    ['Avg Pace',runA.pace||'–',runB.pace||'–'],
+    ['GAP',runA.gap_pace||'–',runB.gap_pace||'–'],
+    ['Avg Speed',runA.speed_kmh!=null?`${fmt(runA.speed_kmh,2)} km/h`:'–',runB.speed_kmh!=null?`${fmt(runB.speed_kmh,2)} km/h`:'–'],
+    ['Avg HR',fmtHR(runA.mean_hr),fmtHR(runB.mean_hr)],
+    ['Max HR',fmtHR(runA.max_hr),fmtHR(runB.max_hr)],
+    ['Cadence',runA.mean_cadence!=null?`${fmt(runA.mean_cadence,0)} spm`:'–',runB.mean_cadence!=null?`${fmt(runB.mean_cadence,0)} spm`:'–'],
+    ['Beats/km',fmt(runA.beats_per_km,0),fmt(runB.beats_per_km,0)],
+    ['Calories',runA.calories!=null?`${fmt(runA.calories,0)} kcal`:'–',runB.calories!=null?`${fmt(runB.calories,0)} kcal`:'–'],
+  ];
+  const hdrA=(runA.date||'').slice(0,16)||'Run A';
+  const hdrB=(runB.date||'').slice(0,16)||'Run B';
+  document.getElementById('cmp-kpis').innerHTML=`
+    <div class="section" style="padding:0;overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align:left">Metric</th>
+            <th>${hdrA}</th>
+            <th>${hdrB}</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(([m,a,b])=>`<tr><td style="text-align:left">${m}</td><td>${a}</td><td>${b}</td></tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function _comparePoints(ts, field, minValue){
+  return (ts||[]).map(r=>{
+    if(r.elapsed_sec==null)return null;
+    const x=Math.round(+r.elapsed_sec);
+    const raw=r[field];
+    const num=raw==null?null:+raw;
+    const y=(Number.isFinite(num)&&(minValue==null||num>=minValue))?num:null;
+    return [x,y];
+  }).filter(Boolean);
+}
+
+function _renderCompareMetric(chartKey, elId, tsA, tsB, cfg){
+  const el=document.getElementById(elId); if(!el)return;
+  if(_charts[chartKey])_charts[chartKey].dispose();
+  const ch=echarts.init(el,'dark',{backgroundColor:'transparent'}); _charts[chartKey]=ch;
+
+  const ptsA=_comparePoints(tsA,cfg.field,cfg.minValue);
+  const ptsB=_comparePoints(tsB,cfg.field,cfg.minValue);
+  const xs=[...ptsA.map(p=>p[0]),...ptsB.map(p=>p[0])].filter(v=>v!=null);
+  if(!xs.length){
+    ch.setOption({title:{text:'No data',textStyle:{color:'#64748b'},left:'center',top:'center'}});
+    return;
+  }
+  const maxMin=Math.ceil(Math.max(...xs));
+
+  ch.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'cross'}},
+    grid:{left:55,right:20,top:20,bottom:45},
+    legend:{data:[cfg.labelA,cfg.labelB],textStyle:{color:'#94a3b8'},bottom:0},
+    xAxis:{type:'value',nameTextStyle:{color:'#64748b',fontSize:10},
+           axisLabel:{color:'#64748b',fontSize:10,formatter:v=>fmtElapsed(v)},min:0,max:maxMin,minInterval:300},
+    yAxis:{type:'value',name:cfg.unit,nameTextStyle:{color:'#64748b',fontSize:10},
+           axisLabel:{color:'#94a3b8',fontSize:10},splitLine:{lineStyle:{color:'#1e2d45'}}},
+    series:[
+      {name:cfg.labelA,type:'line',data:ptsA,smooth:.25,symbol:'none',connectNulls:true,
+       lineStyle:{color:cfg.colorA,width:1.8}},
+      {name:cfg.labelB,type:'line',data:ptsB,smooth:.25,symbol:'none',connectNulls:true,
+       lineStyle:{color:cfg.colorB,width:1.8}},
+    ]
+  });
+
+}
+
+function _setEmptyCompareChart(chartKey, elId, message){
+  const el=document.getElementById(elId); if(!el)return;
+  if(_charts[chartKey])_charts[chartKey].dispose();
+  const ch=echarts.init(el,'dark',{backgroundColor:'transparent'}); _charts[chartKey]=ch;
+  ch.setOption({title:{text:message,textStyle:{color:'#64748b'},left:'center',top:'center'}});
+
+}
+
+// ── detail KPIs ──────────────────────────────────────────────────────────────
+function renderDetailKpis(run){
+  const items=[
+    {l:'Distance',   v:fmtKm(run.distance_km),                                  c:'c-blue'},
+    {l:'Duration',   v:fmtDur(run.duration_min),                                 c:'c-green'},
+    {l:'Avg Pace',   v:run.pace||'–',                                            c:'c-teal'},
+    {l:'GAP',        v:run.gap_pace||'–',                      u:'grade-adj',    c:'c-green'},
+    {l:'Avg HR',     v:fmtHR(run.mean_hr),                                       c:'c-orange'},
+    {l:'Max HR',     v:fmtHR(run.max_hr),                                        c:'c-red'},
+    {l:'Cadence',    v:run.mean_cadence!=null?fmt(run.mean_cadence,0)+' spm':'–',c:'c-purple'},
+    {l:'VO2 Max',    v:run.vo2_max!=null?fmt(run.vo2_max,1):'–', u:'ml/kg/min',  c:'c-indigo'},
+    {l:'Beats/km',   v:fmt(run.beats_per_km,0),                  u:'HR efficiency',c:'c-yellow'},
+    {l:'Calories',   v:run.calories!=null?fmt(run.calories,0):'–',u:'kcal',      c:'c-muted'},
+    {l:'Elevation',  v:run.altitude_gain_m!=null?'+'+fmt(run.altitude_gain_m,0):'–',u:'m gain',c:'c-muted'},
+  ];
+  document.getElementById('detail-kpis').innerHTML=items.map(i=>
+    `<div class="dkpi"><div class="dl">${i.l}</div><div class="dv ${i.c}">${i.v}</div>${i.u?`<div class="du">${i.u}</div>`:''}</div>`
+  ).join('');
+}
+
+// ── chart: trend ─────────────────────────────────────────────────────────────
+function renderTrendChart(){
+  const el=document.getElementById('chart-trend'); if(!el)return;
+  const ch=echarts.init(el,'dark',{backgroundColor:'transparent'}); _charts.trend=ch;
+  const rows=D.trend||[];
+  const dates=rows.map(r=>r.date), vals=rows.map(r=>r.beats_per_km), roll=rows.map(r=>r.beats_per_km_rolling);
+  ch.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'cross'}},
+    grid:{left:60,right:20,top:20,bottom:50},
+    xAxis:{type:'category',data:dates,axisLabel:{color:'#64748b',rotate:30,fontSize:10}},
+    yAxis:{type:'value',name:'beats/km',nameTextStyle:{color:'#64748b'},axisLabel:{color:'#64748b'},
+           min:v=>Math.floor(v.min*.94),max:v=>Math.ceil(v.max*1.06)},
+    legend:{data:['Beats/km','Rolling avg'],textStyle:{color:'#94a3b8'},bottom:0},
+    series:[
+      {name:'Beats/km',type:'scatter',data:vals.map((v,i)=>[dates[i],v]),symbolSize:9,itemStyle:{color:'#60a5fa'}},
+      {name:'Rolling avg',type:'line',data:roll.map((v,i)=>[dates[i],v]),smooth:true,
+       lineStyle:{color:'#34d399',width:2},itemStyle:{color:'#34d399'},symbol:'none'},
+    ]
+  });
+
+}
+
+// ── chart: HR zones ──────────────────────────────────────────────────────────
+function renderZones(zones){
+  const el=document.getElementById('chart-zones'); if(!el)return;
+  if(_charts.zones)_charts.zones.dispose();
+  const ch=echarts.init(el,'dark',{backgroundColor:'transparent'}); _charts.zones=ch;
+  if(!zones||!zones.length){ch.setOption({title:{text:'No HR data',textStyle:{color:'#64748b'},left:'center',top:'center'}});return;}
+  const CLR=['#60a5fa','#34d399','#fbbf24','#f87171','#a78bfa'];
+  ch.setOption({
+    tooltip:{trigger:'item',formatter:p=>`${p.name}<br/>${p.value}% of time (${(D.live&&D.live[_selectedUuid]&&zones[p.dataIndex])?zones[p.dataIndex].samples:''} samples)`},
+    legend:{orient:'vertical',right:5,top:'middle',textStyle:{color:'#94a3b8',fontSize:10}},
+    series:[{
+      type:'pie',radius:['42%','72%'],center:['36%','50%'],
+      data:zones.map((z,i)=>({name:z.zone+' '+z.bpm_range,value:z.pct_time,itemStyle:{color:CLR[i%CLR.length]}})),
+      label:{show:false},
+      emphasis:{label:{show:true,formatter:'{b}\n{d}%',color:'#e2e8f0',fontSize:11}}
+    }]
+  });
+
+}
+
+// ── chart: pace breakdown ────────────────────────────────────────────────────
+function renderPace(pb){
+  const el=document.getElementById('chart-pace'); if(!el)return;
+  if(_charts.pace)_charts.pace.dispose();
+  const ch=echarts.init(el,'dark',{backgroundColor:'transparent'}); _charts.pace=ch;
+  if(!pb||!pb.length){ch.setOption({title:{text:'No data',textStyle:{color:'#64748b'},left:'center',top:'center'}});return;}
+  const segs=pb.map(r=>r.segment), spds=pb.map(r=>r.speed_kmh), hrs=pb.map(r=>r.mean_hr);
+  const maxS=Math.max(...spds.filter(Boolean));
+  const CLR=spds.map(s=>!s?'#334155':s/maxS>.85?'#34d399':s/maxS>.65?'#60a5fa':'#a78bfa');
+  ch.setOption({
+    tooltip:{trigger:'axis',formatter:params=>{
+      let s=`<b>${params[0]?.name||''}</b>`;
+      params.forEach(p=>{
+        const v=p.value;if(v==null)return;
+        if(p.seriesName==='Speed')s+=`<br/>${p.marker}Speed: <b>${(+v).toFixed(1)} km/h</b> — ${speedToPace(+v)}`;
+        else if(p.seriesName==='Avg HR')s+=`<br/>${p.marker}Avg HR: <b>${Math.round(+v)} bpm</b>`;
+      });return s;
+    }},
+    grid:{left:85,right:60,top:10,bottom:40},
+    xAxis:{type:'value',name:'km/h',nameTextStyle:{color:'#64748b',fontSize:10},axisLabel:{color:'#64748b',fontSize:10},
+           min:v=>Math.floor(v.min*.9),max:v=>Math.ceil(v.max*1.05)},
+    yAxis:{type:'category',data:segs,axisLabel:{color:'#94a3b8',fontSize:10}},
+    legend:{data:['Speed','Avg HR'],textStyle:{color:'#94a3b8',fontSize:10},bottom:0},
+    series:[
+      {name:'Speed',type:'bar',data:spds.map((v,i)=>({value:v,itemStyle:{color:CLR[i]}})),barMaxWidth:20,
+       label:{show:true,position:'right',formatter:p=>p.value?speedToPace(+p.value):'',color:'#94a3b8',fontSize:10}},
+      {name:'Avg HR',type:'scatter',yAxisIndex:0,data:hrs.map((v,i)=>v!=null?{value:[v,segs[i]]}:null).filter(Boolean),
+       symbolSize:7,itemStyle:{color:'#f87171'}},
+    ]
+  });
+
+}
+
+// ── chart: HR + speed + cadence timeseries ───────────────────────────────────
+function renderTS(ts){
+  const el=document.getElementById('chart-ts'); if(!el)return;
+  if(_charts.ts)_charts.ts.dispose();
+  const ch=echarts.init(el,'dark',{backgroundColor:'transparent'}); _charts.ts=ch;
+  if(!ts||!ts.length){ch.setOption({title:{text:'No live data',textStyle:{color:'#64748b'},left:'center',top:'center'}});return;}
+  const secs=ts.map(r=>r.elapsed_sec!=null?Math.round(+r.elapsed_sec):null);
+  const maxSec=Math.max(...secs.filter(v=>v!=null),1);
+  const hrs=ts.map(r=>r.heart_rate!=null&&r.heart_rate>0?+r.heart_rate.toFixed(1):null);
+  const spd=ts.map(r=>r.speed_kmh!=null&&r.speed_kmh>0.5?+r.speed_kmh.toFixed(2):null);
+  const cad=ts.map(r=>r.cadence!=null&&r.cadence>0?Math.round(+r.cadence):null);
+  const hasCad=cad.some(v=>v!=null);
+  const kmMarks=_showKmMarkers?_computeKmMarks(ts):[];
+  ch.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'line'},
+      formatter:params=>{
+        const t=fmtElapsed(params[0]&&params[0].axisValue);
+        let s=`<b>${t}</b>`;
+        params.forEach(p=>{
+          const v=p.value&&p.value[1]!=null?p.value[1]:null; if(v==null)return;
+          const vStr=p.seriesName==='Heart Rate'?`${Math.round(v)} bpm`:
+                     p.seriesName==='Speed'?`${v.toFixed(1)} km/h \u2014 ${speedToPace(v)}`:
+                     p.seriesName==='Cadence'?`${Math.round(v)} spm`:v;
+          s+=`<br/>${p.marker}${p.seriesName}: <b>${vStr}</b>`;
+        });
+        return s;
+      }
+    },
+    grid:{left:55,right:55,top:20,bottom:45},
+    legend:{data:['Heart Rate','Speed',...(hasCad?['Cadence']:[])],textStyle:{color:'#94a3b8'},bottom:0},
+    xAxis:{type:'value',min:0,max:maxSec,minInterval:300,
+      axisLabel:{color:'#64748b',fontSize:10,formatter:v=>fmtElapsed(v)},splitLine:{show:false}},
+    yAxis:[
+      {type:'value',name:'bpm',nameTextStyle:{color:'#f87171',fontSize:10},
+       axisLabel:{color:'#f87171',fontSize:10},splitLine:{lineStyle:{color:'#1e2d45'}}},
+      {type:'value',name:'km/h',nameTextStyle:{color:'#60a5fa',fontSize:10},
+       axisLabel:{color:'#60a5fa',fontSize:10},splitLine:{show:false}},
+    ],
+    series:[
+      {name:'Heart Rate',type:'line',data:secs.map((s,i)=>[s,hrs[i]]),smooth:.2,symbol:'none',connectNulls:true,
+       lineStyle:{color:'#f87171',width:1.5},yAxisIndex:0,
+       areaStyle:{color:{type:'linear',x:0,y:0,x2:0,y2:1,colorStops:[{offset:0,color:'rgba(248,113,113,.2)'},{offset:1,color:'rgba(248,113,113,.01)'}]}},
+       markLine:kmMarks.length?{silent:true,symbol:'none',
+         data:kmMarks.map(m=>({xAxis:m.sec,lineStyle:{color:'#334155',type:'dashed',width:1},
+           label:{show:true,formatter:`${m.km}k`,color:'#64748b',fontSize:9,position:'insideStartTop'}}))
+       }:undefined},
+      {name:'Speed',type:'line',data:secs.map((s,i)=>[s,spd[i]]),smooth:.3,symbol:'none',connectNulls:true,
+       lineStyle:{color:'#60a5fa',width:1.5},yAxisIndex:1},
+      ...(hasCad?[{name:'Cadence',type:'line',data:secs.map((s,i)=>[s,cad[i]]),smooth:.2,symbol:'none',connectNulls:true,
+       lineStyle:{color:'#a78bfa',width:1.2},yAxisIndex:0}]:[]),
+    ]
+  });
+}
+
+// ── chart: beats/metre ───────────────────────────────────────────────────────
+function renderBpm(ts){
+  const el=document.getElementById('chart-bpm'); if(!el)return;
+  if(_charts.bpm)_charts.bpm.dispose();
+  const ch=echarts.init(el,'dark',{backgroundColor:'transparent'}); _charts.bpm=ch;
+  if(!ts||!ts.length){ch.setOption({title:{text:'No live data',textStyle:{color:'#64748b'},left:'center',top:'center'}});return;}
+  const secs=ts.map(r=>r.elapsed_sec!=null?Math.round(+r.elapsed_sec):null);
+  const maxSec=Math.max(...secs.filter(v=>v!=null),1);
+  const bpm=ts.map(r=>r.beats_per_m_smooth!=null?+r.beats_per_m_smooth:null);
+  const valid=bpm.filter(v=>v!=null&&v>0&&v<5);
+  const mean=valid.length?valid.reduce((a,b)=>a+b,0)/valid.length:null;
+  ch.setOption({
+    tooltip:{trigger:'axis',formatter:p=>{
+      const v=p[0]&&p[0].value?p[0].value[1]:null;
+      return`${fmtElapsed(p[0]&&p[0].axisValue)}<br/>Beats/m: <b>${v!=null?v.toFixed(3):'–'}</b>`;
+    }},
+    grid:{left:65,right:20,top:20,bottom:45},
+    xAxis:{type:'value',min:0,max:maxSec,minInterval:300,
+      axisLabel:{color:'#64748b',fontSize:10,formatter:v=>fmtElapsed(v)}},
+    yAxis:{type:'value',name:'beats/m',nameTextStyle:{color:'#2dd4bf',fontSize:10},
+      axisLabel:{color:'#64748b',fontSize:10},splitLine:{lineStyle:{color:'#1e2d45'}},
+      min:v=>+Math.max(0,v.min*.9).toFixed(3),max:v=>+Math.min(5,v.max*1.1).toFixed(3)},
+    legend:{data:['Beats/m',...(mean!=null?['Avg']:[])],textStyle:{color:'#94a3b8'},bottom:0},
+    series:[
+      {name:'Beats/m',type:'line',data:secs.map((s,i)=>[s,bpm[i]]),smooth:.3,symbol:'none',connectNulls:true,
+       lineStyle:{color:'#2dd4bf',width:2},
+       areaStyle:{color:{type:'linear',x:0,y:0,x2:0,y2:1,colorStops:[{offset:0,color:'rgba(45,212,191,.3)'},{offset:1,color:'rgba(45,212,191,.02)'}]}}},
+      ...(mean!=null?[{name:'Avg',type:'line',data:secs.map(s=>[s,mean]),
+         lineStyle:{color:'#fbbf24',type:'dashed',width:1},symbol:'none',tooltip:{show:false}}]:[]),
+    ]
+  });
+}
+
+// ── chart: elevation profile + GAP ───────────────────────────────────────────
+function renderAltGAP(ts){
+  const el=document.getElementById('chart-elev'); if(!el)return;
+  if(_charts.elev)_charts.elev.dispose();
+  const ch=echarts.init(el,'dark',{backgroundColor:'transparent'}); _charts.elev=ch;
+  if(!ts||!ts.length||!ts.some(r=>r.altitude_m!=null)){
+    ch.setOption({title:{text:'No GPS elevation data',textStyle:{color:'#64748b'},left:'center',top:'center'}});
+    return;
+  }
+  const secs=ts.map(r=>r.elapsed_sec!=null?Math.round(+r.elapsed_sec):null);
+  const maxSec=Math.max(...secs.filter(v=>v!=null),1);
+  const alt=ts.map(r=>r.altitude_m!=null?+r.altitude_m.toFixed(1):null);
+  const spd=ts.map(r=>r.speed_kmh!=null&&r.speed_kmh>0.5?+r.speed_kmh.toFixed(2):null);
+  const gap=ts.map(r=>r.gap_speed_kmh!=null&&r.gap_speed_kmh>0.5?+r.gap_speed_kmh.toFixed(2):null);
+  const gr=ts.map(r=>r.grade_pct!=null?+r.grade_pct.toFixed(1):null);
+  const hasGAP=gap.some(v=>v!=null);
+  const altVals=alt.filter(v=>v!=null);
+  const altMin=altVals.length?Math.min(...altVals):0, altMax=altVals.length?Math.max(...altVals):100;
+  const altPad=Math.max(5,(altMax-altMin)*.15);
+  ch.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'line'},
+      formatter:params=>{
+        const t=fmtElapsed(params[0]&&params[0].axisValue);
+        const i=params[0]?params[0].dataIndex:0;
+        const byName={};params.forEach(p=>{byName[p.seriesName]=p.value&&p.value[1];});
+        let s=`<b>${t}</b>`;
+        if(byName['Altitude']!=null)s+=`<br/>\u26f0 Altitude: <b>${byName['Altitude'].toFixed(0)} m</b>`;
+        const g=gr[i]; if(g!=null)s+=` <span style="color:${g>2?'#f87171':g<-2?'#34d399':'#94a3b8'}">(${g>0?'+':''}${g.toFixed(1)}%)</span>`;
+        if(byName['Speed']!=null)s+=`<br/>Speed: <b>${byName['Speed'].toFixed(1)} km/h</b> \u2014 ${speedToPace(byName['Speed'])}`;
+        if(hasGAP&&byName['GAP']!=null)s+=`<br/>GAP: <b>${byName['GAP'].toFixed(1)} km/h</b> \u2014 <b>${speedToPace(byName['GAP'])}</b>`;
+        return s;
+      }
+    },
+    grid:{left:55,right:55,top:20,bottom:45},
+    legend:{data:['Altitude','Speed',...(hasGAP?['GAP']:[])],textStyle:{color:'#94a3b8'},bottom:0},
+    xAxis:{type:'value',min:0,max:maxSec,minInterval:300,
+      axisLabel:{color:'#64748b',fontSize:10,formatter:v=>fmtElapsed(v)},splitLine:{show:false}},
+    yAxis:[
+      {type:'value',name:'m',nameTextStyle:{color:'#94a3b8',fontSize:10},
+       axisLabel:{color:'#94a3b8',fontSize:10},splitLine:{lineStyle:{color:'#1e2d45'}},
+       min:Math.floor(altMin-altPad),max:Math.ceil(altMax+altPad)},
+      {type:'value',name:'km/h',nameTextStyle:{color:'#60a5fa',fontSize:10},
+       axisLabel:{color:'#60a5fa',fontSize:10},splitLine:{show:false},
+       min:v=>Math.floor(v.min*.85),max:v=>Math.ceil(v.max*1.1)},
+    ],
+    series:[
+      {name:'Altitude',type:'line',data:secs.map((s,i)=>[s,alt[i]]),smooth:.4,symbol:'none',connectNulls:true,yAxisIndex:0,
+       lineStyle:{color:'#64748b',width:1},
+       areaStyle:{color:{type:'linear',x:0,y:0,x2:0,y2:1,colorStops:[{offset:0,color:'rgba(100,116,139,.45)'},{offset:1,color:'rgba(100,116,139,.04)'}]}}},
+      {name:'Speed',type:'line',data:secs.map((s,i)=>[s,spd[i]]),smooth:.3,symbol:'none',connectNulls:true,yAxisIndex:1,
+       lineStyle:{color:'rgba(96,165,250,.55)',width:1.5}},
+      ...(hasGAP?[{name:'GAP',type:'line',data:secs.map((s,i)=>[s,gap[i]]),smooth:.3,symbol:'none',connectNulls:true,yAxisIndex:1,
+       lineStyle:{color:'#34d399',width:2.5}}]:[]),
+    ]
+  });
+}
+
+// ── GPS map (Leaflet + CartoDB dark tiles) ────────────────────────────────────
+function renderMap(gpsTrack, ts){
+  const el=document.getElementById('run-map'); if(!el)return;
+  if(_leafletMap){_leafletMap.remove();_leafletMap=null;}
+  if(!gpsTrack||!gpsTrack.length){
+    el.innerHTML='<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#64748b;font-size:13px">No GPS data for this run</div>';
+    return;
+  }
+  el.innerHTML='';
+  _leafletMap=L.map(el,{zoomControl:true,attributionControl:false});
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    {maxZoom:19,subdomains:'abcd'}).addTo(_leafletMap);
+  const latlngs=gpsTrack.map(p=>[p[0],p[1]]);
+  L.polyline(latlngs,{color:'#3b82f6',weight:3.5,opacity:.85}).addTo(_leafletMap);
+  if(latlngs.length>=2){
+    L.circleMarker(latlngs[0],{radius:7,fillColor:'#34d399',color:'#fff',weight:2,fillOpacity:1}).bindTooltip('Start',{permanent:false}).addTo(_leafletMap);
+    L.circleMarker(latlngs[latlngs.length-1],{radius:7,fillColor:'#f87171',color:'#fff',weight:2,fillOpacity:1}).bindTooltip('Finish',{permanent:false}).addTo(_leafletMap);
+  }
+  // Km markers: find lat/lng in timeseries at each km crossing
+  if(_showKmMarkers&&ts&&ts.length){
+    _computeKmMarks(ts).forEach(m=>{
+      let best=null,bestD=Infinity;
+      ts.forEach(r=>{if(r.elapsed_sec==null||r.latitude==null)return;const d=Math.abs(r.elapsed_sec-m.sec);if(d<bestD){bestD=d;best=r;}});
+      if(best&&best.latitude!=null){
+        L.marker([best.latitude,best.longitude],{icon:L.divIcon({
+          className:'',
+          html:`<div style="background:#1e2d45;color:#94a3b8;font-size:9px;font-weight:700;border:1px solid #334155;border-radius:3px;padding:2px 5px;white-space:nowrap">${m.km}km</div>`,
+          iconAnchor:[14,8]
+        })}).addTo(_leafletMap);
+      }
+    });
+  }
+  _leafletMap.fitBounds(L.latLngBounds(latlngs).pad(0.08));
+  setTimeout(()=>_leafletMap&&_leafletMap.invalidateSize(),120);
+}
+</script>
+</body>
+</html>

@@ -42,9 +42,29 @@ class BaseMetric:
     # ------------------------------------------------------------------
 
     def _find_csv(self) -> Path | None:
-        """Locate the CSV for this metric by glob (handles the timestamp suffix)."""
+        """
+        Locate the CSV for this metric by glob (handles the timestamp suffix).
+
+        Samsung Health exports follow the naming convention:
+            ``<metric_name>.<timestamp>.csv``
+        where ``<timestamp>`` is a sequence of digits (≥ 10 characters).
+
+        The loose glob ``<metric_name>.*.csv`` would also match sub-metrics
+        (e.g. ``com.samsung.shealth.exercise.recovery_heart_rate.*``), so we
+        filter to only files where the stem stripped of the trailing timestamp
+        exactly equals ``metric_name``.
+        """
         pattern = f"{self.metric_name}.*.csv"
-        matches = list(self._data_dir.glob(pattern))
+        matches = []
+        for p in self._data_dir.glob(pattern):
+            # stem = "com.samsung.shealth.exercise.20260328222493"
+            stem_parts = p.stem.rsplit(".", 1)
+            if (
+                len(stem_parts) == 2
+                and stem_parts[1].isdigit()
+                and stem_parts[0] == self.metric_name
+            ):
+                matches.append(p)
         if not matches:
             return None
         # Take the most recently modified if multiple exports exist

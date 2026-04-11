@@ -23,6 +23,7 @@ Quick start::
 from samsung_health_sdk.parser import SamsungHealthParser
 from samsung_health_sdk.comparator import SamsungHealthComparator
 from samsung_health_sdk.features import HealthFeatureEngine
+from samsung_health_sdk.exercise_analysis import RunAnalysis
 from samsung_health_sdk.exceptions import MetricNotFoundError, DataParseError, SamsungHealthError
 
 __version__ = "0.2.1"
@@ -30,6 +31,7 @@ __all__ = [
     "SamsungHealthParser",
     "SamsungHealthComparator",
     "HealthFeatureEngine",
+    "RunAnalysis",
     "MetricNotFoundError",
     "DataParseError",
     "SamsungHealthError",
