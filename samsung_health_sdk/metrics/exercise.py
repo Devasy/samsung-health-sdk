@@ -253,17 +253,20 @@ class ExerciseMetric(BaseMetric):
             return runs
 
         # Deduplicate: group sessions that start within 5 minutes of each other.
+        # Contiguous groups are identified by gaps > 5 min in sorted start_time,
+        # avoiding bucket-boundary misses from dt.round("5min").
         # Within each group, prefer the record with HR data over one without.
-        runs["_rounded_start"] = runs["start_time"].dt.round("5min")
+        runs = runs.sort_values("start_time").reset_index(drop=True)
+        runs["_group"] = runs["start_time"].diff().gt(pd.Timedelta(minutes=5)).cumsum()
         runs["_has_hr"] = runs["mean_heart_rate"].notna().astype(int)
-        sort_keys = ["_rounded_start", "_has_hr", "mean_heart_rate"]
+        sort_keys = ["_group", "_has_hr", "mean_heart_rate"]
         sort_asc = [True, False, False]
         if "distance_km" in runs.columns:
             sort_keys.append("distance_km")
             sort_asc.append(False)
         runs = runs.sort_values(sort_keys, ascending=sort_asc, na_position="last")
-        runs = runs.drop_duplicates(subset=["_rounded_start"], keep="first")
-        runs = runs.drop(columns=["_rounded_start", "_has_hr"])
+        runs = runs.drop_duplicates(subset=["_group"], keep="first")
+        runs = runs.drop(columns=["_group", "_has_hr"])
 
         return runs.sort_values("start_time").reset_index(drop=True)
 
@@ -308,6 +311,7 @@ class ExerciseMetric(BaseMetric):
                 df[col] = pd.to_numeric(df[col], errors="coerce")
 
         if "start_time" in df.columns:
+            df = df.sort_values("start_time").reset_index(drop=True)
             t0 = df["start_time"].iloc[0]
             df["elapsed_sec"] = (df["start_time"] - t0).dt.total_seconds()
             df["elapsed_min"] = df["elapsed_sec"] / 60.0
@@ -317,7 +321,7 @@ class ExerciseMetric(BaseMetric):
             safe_speed = df["speed"].replace(0, float("nan"))
             df["beats_per_m"] = df["heart_rate"] / (60.0 * safe_speed)
 
-        return df.sort_values("start_time").reset_index(drop=True)
+        return df
 
     def load_run_locationdata(self, datauuid: str) -> pd.DataFrame:
         """

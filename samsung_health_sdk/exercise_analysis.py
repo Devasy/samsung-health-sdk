@@ -179,15 +179,14 @@ class RunAnalysis:
         elif "beats_per_m" in df.columns:
             df["beats_per_m_smooth"] = df["beats_per_m"]
 
-        # Merge GPS data: altitude, latitude, longitude → grade → Grade-Adjusted Pace
+        # Merge GPS data: latitude, longitude (and optionally altitude) → grade → Grade-Adjusted Pace
         try:
             loc_df = self._metric.load_run_locationdata(datauuid)
-            if not loc_df.empty and "altitude" in loc_df.columns:
-                loc_sub = (
-                    loc_df[["start_time", "latitude", "longitude", "altitude"]]
-                    .dropna(subset=["latitude", "longitude"])
-                    .copy()
-                )
+            if not loc_df.empty:
+                loc_cols = ["start_time", "latitude", "longitude"]
+                if "altitude" in loc_df.columns:
+                    loc_cols.append("altitude")
+                loc_sub = loc_df[loc_cols].dropna(subset=["latitude", "longitude"]).copy()
                 df = pd.merge_asof(
                     df.sort_values("start_time"),
                     loc_sub.sort_values("start_time"),
@@ -195,16 +194,18 @@ class RunAnalysis:
                     direction="nearest",
                     tolerance=pd.Timedelta("5s"),
                 )
-                # Smooth raw GPS altitude (15-sample window removes spike noise)
-                df["altitude_m"] = (
-                    pd.to_numeric(df["altitude"], errors="coerce")
-                    .rolling(window=15, min_periods=1, center=True)
-                    .mean()
-                )
-                df = df.drop(columns=["altitude"], errors="ignore")
+
+                if "altitude" in df.columns:
+                    # Smooth raw GPS altitude (15-sample window removes spike noise)
+                    df["altitude_m"] = (
+                        pd.to_numeric(df["altitude"], errors="coerce")
+                        .rolling(window=15, min_periods=1, center=True)
+                        .mean()
+                    )
+                    df = df.drop(columns=["altitude"], errors="ignore")
 
                 # Grade = Δaltitude / Δdistance; smooth over 30 samples
-                if "distance_cumulative_km" in df.columns:
+                if "altitude_m" in df.columns and "distance_cumulative_km" in df.columns:
                     dist_m = df["distance_cumulative_km"] * 1000.0
                     d_alt = df["altitude_m"].diff().fillna(0)
                     d_dist = dist_m.diff().fillna(0)
@@ -347,7 +348,8 @@ class RunAnalysis:
             return pd.DataFrame()
 
         out = pd.DataFrame()
-        out["date"] = runs["start_time"].dt.tz_convert(self._tz).dt.strftime("%Y-%m-%d")
+        out["start_time"] = runs["start_time"].dt.tz_convert(self._tz)
+        out["date"] = out["start_time"].dt.strftime("%Y-%m-%d")
         out["distance_km"] = runs["distance_km"].round(2)
         out["duration_min"] = runs["duration_min"].round(1)
         out["pace"] = runs["pace_min_per_km"].map(_fmt_pace)
@@ -355,12 +357,15 @@ class RunAnalysis:
         out["beats_per_km"] = runs["beats_per_km"].round(0)
 
         if rolling_weeks > 0:
-            window = max(rolling_weeks, 1)
-            out["beats_per_km_rolling"] = (
-                out["beats_per_km"].rolling(window=window, min_periods=1).mean().round(0)
+            days = max(int(rolling_weeks * 7), 1)
+            out_sorted = out.sort_values("start_time").set_index("start_time")
+            rolling_vals = (
+                out_sorted["beats_per_km"].rolling(window=f"{days}D", min_periods=1).mean().round(0)
             )
+            rolling_vals.index = out_sorted.index
+            out["beats_per_km_rolling"] = rolling_vals.values
 
-        return out.reset_index(drop=True)
+        return out.drop(columns=["start_time"]).reset_index(drop=True)
 
     def pace_breakdown(
         self,

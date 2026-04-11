@@ -290,7 +290,7 @@ const COLS=[
   {k:'date',        l:'Date',     f:v=>v?v.slice(0,16):'–',           r:false},
   {k:'distance_km', l:'Distance', f:v=>fmtKm(v),                       r:true},
   {k:'duration_min',l:'Duration', f:v=>fmtDur(v),                      r:true},
-  {k:'pace',        l:'Pace',     f:v=>v||'–',                         r:true},
+  {k:'pace',        l:'Pace',     f:v=>v||'–',                         r:true, sortKey:'pace_min_per_km'},
   {k:'speed_kmh',   l:'Speed',    f:v=>v==null?'–':fmt(v,1)+' km/h',   r:true},
   {k:'mean_hr',     l:'Avg HR',   f:v=>fmtHR(v),                       r:true},
   {k:'max_hr',      l:'Max HR',   f:v=>fmtHR(v),                       r:true},
@@ -300,8 +300,9 @@ const COLS=[
 ];
 
 function renderRunsTable(){
+  const dataKey=COLS.find(c=>c.k===_sortKey)?.sortKey||_sortKey;
   const sorted=[...D.runs].sort((a,b)=>{
-    let av=a[_sortKey],bv=b[_sortKey];
+    let av=a[dataKey],bv=b[dataKey];
     if(av==null)return 1; if(bv==null)return -1;
     return _sortAsc?(av>bv?1:-1):(av<bv?1:-1);
   });

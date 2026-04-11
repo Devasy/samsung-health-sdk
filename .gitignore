@@ -1,7 +1,7 @@
 venv/
 __pycache__/
-samsunghealth_*/*
-jsons/*
+**/samsunghealth_*/
+jsons/
 *.zip
 *.rar
 archive/
@@ -9,5 +9,4 @@ dist/
 build/
 *.egg-info/
 *.csv
-*/samsunghealth_*/*
 .claude/*
