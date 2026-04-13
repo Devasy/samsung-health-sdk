@@ -9,6 +9,69 @@ A Python SDK for parsing and analysing [Samsung Health](https://www.samsung.com/
 
 Load any health metric from a Samsung Health export directory as a **pandas DataFrame** with a single function call. Compare data across multiple people or time windows. Derive higher-level health features from the raw data.
 
+## Dashboards
+
+### Health Dashboard
+
+A self-contained HTML report covering sleep, HRV readiness, stress, activity, and cardiac efficiency — generated from a single function call.
+
+[![Watch the demo](https://img.youtube.com/vi/I3iFC4uPL0I/0.jpg)](https://youtu.be/I3iFC4uPL0I)
+
+```python
+from samsung_health_sdk import SamsungHealthParser
+from samsung_health_sdk.features import HealthFeatureEngine
+from samsung_health_sdk.report import ReportBuilder
+
+p = SamsungHealthParser("path/to/export")
+eng = HealthFeatureEngine(p, tz_offset_hours=5.5)
+
+builder = ReportBuilder(eng)
+builder.build("health_report.html", start="2024-11-01", end="2025-06-30")
+```
+
+Or via the engine shortcut:
+
+```python
+eng.export_report("health_report.html", start="2024-11-01", end="2025-06-30")
+```
+
+**Sections included:**
+- KPI cards — sleep score, HRV readiness, resting HR, cardiac load trend
+- Sleep quality timeline (efficiency, deep %, REM %, fragmentation)
+- Nightly physiology — HRV, respiratory rate, movement restlessness
+- HRV readiness vs personal rolling baseline
+- Stress impact on sleep quality
+- Daily activity breakdown (sedentary / light / moderate / vigorous minutes)
+- Walking cardiac load trend (HR ÷ speed, 4-week rolling average)
+
+---
+
+### Running Dashboard
+
+A self-contained HTML dashboard for runners — per-run metrics, live GPS maps, HR zone breakdowns, pace charts, and GAP (Grade-Adjusted Pace) analysis.
+
+[![Watch the demo](https://img.youtube.com/vi/q_lqcwixxvg/0.jpg)](https://youtu.be/q_lqcwixxvg)
+
+```python
+from samsung_health_sdk import SamsungHealthParser
+from samsung_health_sdk.report.run_dashboard import RunDashboardBuilder
+
+p = SamsungHealthParser("path/to/export")
+RunDashboardBuilder(p).build("run_dashboard.html", start="2026-01-01")
+```
+
+**Sections included:**
+- KPI cards — total runs, total distance, best pace, avg beats/km
+- Run history table with sortable columns (date, distance, pace, HR, GAP pace)
+- Beats-per-km efficiency trend across all runs
+- Per-run drill-down:
+  - Interactive GPS map
+  - Heart rate zone breakdown (donut chart)
+  - Pace breakdown by 5-minute buckets
+  - Time-series charts — HR, speed, cadence, altitude, grade, GAP speed, cardiac cost
+
+---
+
 ## Installation
 
 ```bash
