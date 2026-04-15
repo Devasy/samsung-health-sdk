@@ -36,7 +36,6 @@ SignalAnomalyEngine
     train both models in one step, then ``analyse_waking()`` and
     ``analyse_sleep()`` to get anomaly DataFrames ready for plotting.
 """
-
 from __future__ import annotations
 
 from pathlib import Path
@@ -57,7 +56,6 @@ from samsung_health_sdk.ml.signal_dataset import (
 # 1.  Movement → HR predictor
 # ──────────────────────────────────────────────────────────────────────────────
 
-
 class _MovementHRNet(nn.Module):
     """
     Bidirectional GRU sequence-to-sequence predictor.
@@ -66,9 +64,8 @@ class _MovementHRNet(nn.Module):
     Output: (batch, window_size)   — normalised HR at each step
     """
 
-    def __init__(
-        self, n_input: int, hidden: int = 32, n_layers: int = 2, dropout: float = 0.2
-    ) -> None:
+    def __init__(self, n_input: int, hidden: int = 32, n_layers: int = 2,
+                 dropout: float = 0.2) -> None:
         super().__init__()
         self.gru = nn.GRU(
             input_size=n_input,
@@ -86,7 +83,7 @@ class _MovementHRNet(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        out, _ = self.gru(x)  # (B, T, 2H)
+        out, _ = self.gru(x)            # (B, T, 2H)
         return self.head(out).squeeze(-1)  # (B, T)
 
 
@@ -118,7 +115,7 @@ class MovementHRPredictor:
         self.lr = lr
         self.device = torch.device(_auto_device(device))
         self._net: _MovementHRNet | None = None
-        self._ds: MinuteLevelDataset | None = None
+        self._ds:  MinuteLevelDataset | None = None
 
     # ------------------------------------------------------------------
 
@@ -137,29 +134,29 @@ class MovementHRPredictor:
         Returns training loss history (per epoch).
         """
         self._ds = ds
-        n_val = max(1, int(len(ds) * val_split))
+        n_val   = max(1, int(len(ds) * val_split))
         n_train = len(ds) - n_val
         # Chronological split
         train_ds = Subset(ds, list(range(n_train)))
-        val_ds = Subset(ds, list(range(n_train, len(ds))))
+        val_ds   = Subset(ds, list(range(n_train, len(ds))))
 
         self._net = _MovementHRNet(
             n_input=ds.n_input_features,
             hidden=self.hidden,
         ).to(self.device)
 
-        optim = torch.optim.Adam(self._net.parameters(), lr=self.lr, weight_decay=1e-4)
-        sched = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optim  = torch.optim.Adam(self._net.parameters(), lr=self.lr, weight_decay=1e-4)
+        sched  = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optim, patience=5, factor=0.5, min_lr=1e-5
         )
-        crit = nn.HuberLoss(delta=0.05)
+        crit   = nn.HuberLoss(delta=0.05)
         best_v = float("inf")
         best_w = None
         no_imp = 0
         history: list[float] = []
 
-        t_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, drop_last=False)
-        v_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False)
+        t_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,  drop_last=False)
+        v_loader = DataLoader(val_ds,   batch_size=batch_size, shuffle=False)
 
         for epoch in range(1, epochs + 1):
             self._net.train()
@@ -252,9 +249,9 @@ class MovementHRPredictor:
         y_all = joint["heart_rate"].values.astype(np.float32)
         ts_all = np.array(joint.index)
         ws = self.window_size
-        full_ds._X = np.stack([X_all[i : i + ws] for i in range(len(X_all) - ws + 1)])
-        full_ds._y = np.stack([y_all[i : i + ws] for i in range(len(y_all) - ws + 1)])
-        full_ds._ts = [ts_all[i : i + ws] for i in range(len(ts_all) - ws + 1)]
+        full_ds._X  = np.stack([X_all[i: i + ws] for i in range(len(X_all) - ws + 1)])
+        full_ds._y  = np.stack([y_all[i: i + ws] for i in range(len(y_all) - ws + 1)])
+        full_ds._ts = [ts_all[i: i + ws] for i in range(len(ts_all) - ws + 1)]
 
         loader = DataLoader(full_ds, batch_size=512, shuffle=False)
         self._net.eval()
@@ -262,7 +259,7 @@ class MovementHRPredictor:
         with torch.no_grad():
             for x_b, _ in loader:
                 all_pred.append(self._net(x_b.to(self.device)).cpu().numpy())
-        pred_all = np.concatenate(all_pred, axis=0)  # (N, window_size)
+        pred_all = np.concatenate(all_pred, axis=0)   # (N, window_size)
 
         # Average predictions across overlapping windows → per-minute
         accum_pred: dict[pd.Timestamp, list[float]] = {}
@@ -286,52 +283,47 @@ class MovementHRPredictor:
 
         # Rolling z-score
         res_s = pd.Series(residuals, index=ts_sorted)
-        roll_mu = res_s.rolling(z_window, min_periods=10, center=True).mean()
+        roll_mu  = res_s.rolling(z_window, min_periods=10, center=True).mean()
         roll_sig = res_s.rolling(z_window, min_periods=10, center=True).std().replace(0, 1e-3)
         z_scores = (res_s - roll_mu) / roll_sig
 
         anomaly_flag = z_scores.abs() > z_threshold
         direction = pd.Series("normal", index=ts_sorted)
-        direction[z_scores > z_threshold] = "elevated"
+        direction[z_scores >  z_threshold] = "elevated"
         direction[z_scores < -z_threshold] = "depressed"
 
-        return pd.DataFrame(
-            {
-                "actual_hr": true_bpm,
-                "predicted_hr": pred_bpm,
-                "residual": residuals,
-                "z_score": z_scores.values,
-                "anomaly_flag": anomaly_flag.values,
-                "anomaly_direction": direction.values,
-            },
-            index=ts_sorted,
-        )
+        return pd.DataFrame({
+            "actual_hr":        true_bpm,
+            "predicted_hr":     pred_bpm,
+            "residual":         residuals,
+            "z_score":          z_scores.values,
+            "anomaly_flag":     anomaly_flag.values,
+            "anomaly_direction": direction.values,
+        }, index=ts_sorted)
 
     # ------------------------------------------------------------------
 
     def save(self, path: str | Path) -> None:
         path = Path(path)
-        torch.save(
-            {
-                "net_state": self._net.state_dict(),
-                "net_config": {
-                    "n_input": self._ds.n_input_features,
-                    "hidden": self.hidden,
-                },
-                "window_size": self.window_size,
-                "hr_min": self._ds.hr_min,
-                "hr_max": self._ds.hr_max,
-                "al_min": self._ds.al_min,
-                "al_max": self._ds.al_max,
-                "input_cols": self._ds.input_cols,
+        torch.save({
+            "net_state":    self._net.state_dict(),
+            "net_config":   {
+                "n_input":  self._ds.n_input_features,
+                "hidden":   self.hidden,
             },
-            path,
-        )
+            "window_size":  self.window_size,
+            "hr_min":       self._ds.hr_min,
+            "hr_max":       self._ds.hr_max,
+            "al_min":       self._ds.al_min,
+            "al_max":       self._ds.al_max,
+            "input_cols":   self._ds.input_cols,
+        }, path)
 
     @classmethod
     def load(cls, path: str | Path, device: str | None = None) -> "MovementHRPredictor":
         ckpt = torch.load(path, map_location="cpu", weights_only=True)
-        p = cls(window_size=ckpt["window_size"], hidden=ckpt["net_config"]["hidden"], device=device)
+        p = cls(window_size=ckpt["window_size"], hidden=ckpt["net_config"]["hidden"],
+                device=device)
         p._net = _MovementHRNet(**ckpt["net_config"]).to(p.device)
         p._net.load_state_dict(ckpt["net_state"])
         # Restore norm params
@@ -353,7 +345,6 @@ class MovementHRPredictor:
 # ──────────────────────────────────────────────────────────────────────────────
 # 2.  Sleep multivariate LSTM autoencoder
 # ──────────────────────────────────────────────────────────────────────────────
-
 
 class _SleepAENet(nn.Module):
     """
@@ -387,12 +378,12 @@ class _SleepAENet(nn.Module):
         """x : (B, T, C)  →  recon : (B, T, C)"""
         B, T, C = x.shape
 
-        _, (h_enc, _) = self.encoder(x)  # h_enc: (1, B, H)
-        z = self.enc_proj(h_enc.squeeze(0))  # (B, latent)
+        _, (h_enc, _) = self.encoder(x)          # h_enc: (1, B, H)
+        z = self.enc_proj(h_enc.squeeze(0))       # (B, latent)
 
         # Repeat latent for each decoder step
         dec_in = self.latent_expand(z).unsqueeze(1).repeat(1, T, 1)  # (B, T, H)
-        dec_out, _ = self.decoder(dec_in)  # (B, T, H)
+        dec_out, _ = self.decoder(dec_in)         # (B, T, H)
         recon = torch.sigmoid(self.dec_proj(dec_out))  # (B, T, C) in [0,1]
         return recon
 
@@ -425,7 +416,7 @@ class SleepMultivariateAE:
         self.hidden = hidden
         self.device = torch.device(_auto_device(device))
         self._net: _SleepAENet | None = None
-        self._ds: SleepWindowDataset | None = None
+        self._ds:  SleepWindowDataset | None = None
         self._threshold: float = 0.0  # anomaly threshold (95th percentile of train error)
 
     # ------------------------------------------------------------------
@@ -450,10 +441,10 @@ class SleepMultivariateAE:
         Returns training loss history.
         """
         self._ds = ds
-        n_val = max(1, int(len(ds) * val_split))
+        n_val   = max(1, int(len(ds) * val_split))
         n_train = len(ds) - n_val
         train_ds = Subset(ds, list(range(n_train)))
-        val_ds = Subset(ds, list(range(n_train, len(ds))))
+        val_ds   = Subset(ds, list(range(n_train, len(ds))))
 
         self._net = _SleepAENet(
             n_signals=ds.n_signals,
@@ -466,12 +457,12 @@ class SleepMultivariateAE:
         sched = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optim, patience=6, factor=0.5, min_lr=1e-5
         )
-        crit = nn.MSELoss(reduction="mean")
+        crit  = nn.MSELoss(reduction="mean")
         best_v, best_w, no_imp = float("inf"), None, 0
         history: list[float] = []
 
-        t_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, drop_last=False)
-        v_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False)
+        t_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,  drop_last=False)
+        v_loader = DataLoader(val_ds,   batch_size=batch_size, shuffle=False)
 
         for epoch in range(1, epochs + 1):
             self._net.train()
@@ -480,7 +471,7 @@ class SleepMultivariateAE:
                 x_b = x_b.to(self.device)
                 optim.zero_grad()
                 recon = self._net(x_b)
-                loss = crit(recon, x_b)
+                loss  = crit(recon, x_b)
                 loss.backward()
                 nn.utils.clip_grad_norm_(self._net.parameters(), 1.0)
                 optim.step()
@@ -568,13 +559,13 @@ class SleepMultivariateAE:
                 all_recon.append(recon.cpu().numpy())
                 all_input.append(x_b.cpu().numpy())
 
-        recon_arr = np.concatenate(all_recon, axis=0)  # (N, W, C)
-        input_arr = np.concatenate(all_input, axis=0)  # (N, W, C)
-        err_arr = (recon_arr - input_arr) ** 2  # (N, W, C)
+        recon_arr = np.concatenate(all_recon, axis=0)   # (N, W, C)
+        input_arr = np.concatenate(all_input, axis=0)   # (N, W, C)
+        err_arr   = (recon_arr - input_arr) ** 2        # (N, W, C)
 
         # Per-window, per-step, per-signal error: aggregate via overlapping windows
         accum_total: dict[pd.Timestamp, list[float]] = {}
-        accum_sig: dict[pd.Timestamp, dict[str, list[float]]] = {}
+        accum_sig:   dict[pd.Timestamp, dict[str, list[float]]] = {}
         accum_night: dict[pd.Timestamp, str] = {}
 
         for i, ts_arr in enumerate(ds._ts):
@@ -589,18 +580,15 @@ class SleepMultivariateAE:
 
         ts_sorted = sorted(accum_total.keys())
         total_err = np.array([np.mean(accum_total[t]) for t in ts_sorted])
-        nights = [accum_night[t] for t in ts_sorted]
+        nights    = [accum_night[t] for t in ts_sorted]
 
-        result = pd.DataFrame({"recon_error": total_err, "night_date": nights}, index=ts_sorted)
+        result = pd.DataFrame({"recon_error": total_err, "night_date": nights},
+                               index=ts_sorted)
 
         # Per-signal error columns
         for col in ds.signal_cols:
-            key = (
-                col.replace("heart_rate", "hr")
-                .replace("activity_level", "activity")
-                .replace("respiratory_rate", "rr")
-                + "_error"
-            )
+            key = col.replace("heart_rate", "hr").replace("activity_level", "activity") \
+                     .replace("respiratory_rate", "rr") + "_error"
             result[key] = [np.mean(accum_sig[t][col]) for t in ts_sorted]
 
         # Anomaly flag from calibrated threshold
@@ -609,7 +597,7 @@ class SleepMultivariateAE:
         # Per-night z-score (makes inter-night comparison easier)
         z_scores: list[float] = []
         for night, grp in result.groupby("night_date"):
-            mu = grp["recon_error"].mean()
+            mu  = grp["recon_error"].mean()
             sig = grp["recon_error"].std()
             if sig == 0 or pd.isna(sig):
                 sig = 1e-6
@@ -633,49 +621,44 @@ class SleepMultivariateAE:
         rows: list[dict] = []
         for night, grp in minute_df.groupby("night_date"):
             total_min = len(grp)
-            anom_min = int(grp["anomaly_flag"].sum())
-            rows.append(
-                {
-                    "night_date": night,
-                    "mean_recon_error": round(float(grp["recon_error"].mean()), 6),
-                    "max_recon_error": round(float(grp["recon_error"].max()), 6),
-                    "anomaly_minutes": anom_min,
-                    "anomaly_pct": round(anom_min / max(total_min, 1) * 100, 1),
-                    "overall_anomaly": anom_min / max(total_min, 1) > 0.10,
-                }
-            )
-        return pd.DataFrame(rows).set_index("night_date").sort_index()
+            anom_min  = int(grp["anomaly_flag"].sum())
+            rows.append({
+                "night_date":        night,
+                "mean_recon_error":  round(float(grp["recon_error"].mean()), 6),
+                "max_recon_error":   round(float(grp["recon_error"].max()),  6),
+                "anomaly_minutes":   anom_min,
+                "anomaly_pct":       round(anom_min / max(total_min, 1) * 100, 1),
+                "overall_anomaly":   anom_min / max(total_min, 1) > 0.10,
+            })
+        return (
+            pd.DataFrame(rows)
+            .set_index("night_date")
+            .sort_index()
+        )
 
     # ------------------------------------------------------------------
 
     def save(self, path: str | Path) -> None:
         path = Path(path)
-        torch.save(
-            {
-                "net_state": self._net.state_dict(),
-                "net_config": {
-                    "n_signals": self._ds.n_signals,
-                    "window_size": self.window_size,
-                    "latent": self.latent,
-                    "hidden": self.hidden,
-                },
-                "signal_cols": self._ds.signal_cols,
-                "norm_params": self._ds.norm_params,
-                "threshold": self._threshold,
+        torch.save({
+            "net_state":   self._net.state_dict(),
+            "net_config":  {
+                "n_signals":   self._ds.n_signals,
+                "window_size": self.window_size,
+                "latent":      self.latent,
+                "hidden":      self.hidden,
             },
-            path,
-        )
+            "signal_cols": self._ds.signal_cols,
+            "norm_params": self._ds.norm_params,
+            "threshold":   self._threshold,
+        }, path)
 
     @classmethod
     def load(cls, path: str | Path, device: str | None = None) -> "SleepMultivariateAE":
         ckpt = torch.load(path, map_location="cpu", weights_only=True)
-        cfg = ckpt["net_config"]
-        ae = cls(
-            window_size=cfg["window_size"],
-            latent=cfg["latent"],
-            hidden=cfg["hidden"],
-            device=device,
-        )
+        cfg  = ckpt["net_config"]
+        ae   = cls(window_size=cfg["window_size"], latent=cfg["latent"],
+                   hidden=cfg["hidden"], device=device)
         ae._net = _SleepAENet(**cfg).to(ae.device)
         ae._net.load_state_dict(ckpt["net_state"])
         ae._threshold = ckpt["threshold"]
@@ -685,7 +668,6 @@ class SleepMultivariateAE:
 # ──────────────────────────────────────────────────────────────────────────────
 # 3.  Orchestrator
 # ──────────────────────────────────────────────────────────────────────────────
-
 
 class SignalAnomalyEngine:
     """
@@ -718,14 +700,14 @@ class SignalAnomalyEngine:
         self.engine = engine
         self.device = device
         self.waking_model: MovementHRPredictor | None = None
-        self.sleep_model: SleepMultivariateAE | None = None
-        self._waking_ds: MinuteLevelDataset | None = None
-        self._sleep_ds: SleepWindowDataset | None = None
+        self.sleep_model:  SleepMultivariateAE  | None = None
+        self._waking_ds:   MinuteLevelDataset   | None = None
+        self._sleep_ds:    SleepWindowDataset    | None = None
 
     def fit_all(
         self,
         waking_epochs: int = 60,
-        sleep_epochs: int = 80,
+        sleep_epochs:  int = 80,
         verbose: bool = True,
     ) -> None:
         """Build datasets and train both models."""
@@ -755,15 +737,17 @@ class SignalAnomalyEngine:
     def _fit_sleep(self, epochs: int, verbose: bool) -> None:
         if verbose:
             print("  Building sleep signal dataset …")
-        self._sleep_ds = SleepWindowDataset(self.engine, window_size=30, stride=5)
+        self._sleep_ds = SleepWindowDataset(
+            self.engine, window_size=30, stride=5
+        )
         n_nights = len(self._sleep_ds.metadata["night_date"].unique())
-        n_sigs = self._sleep_ds.n_signals
+        n_sigs   = self._sleep_ds.n_signals
         if verbose:
-            print(
-                f"  {len(self._sleep_ds):,} patches across {n_nights} nights, "
-                f"{n_sigs} signals: {self._sleep_ds.signal_cols}"
-            )
-        self.sleep_model = SleepMultivariateAE(window_size=30, device=self.device)
+            print(f"  {len(self._sleep_ds):,} patches across {n_nights} nights, "
+                  f"{n_sigs} signals: {self._sleep_ds.signal_cols}")
+        self.sleep_model = SleepMultivariateAE(
+            window_size=30, device=self.device
+        )
         self.sleep_model._ds = self._sleep_ds
         self.sleep_model.fit(self._sleep_ds, epochs=epochs, verbose=verbose)
 
@@ -779,13 +763,11 @@ class SignalAnomalyEngine:
         if self.waking_model is None:
             raise RuntimeError("Call fit_all() first.")
         df = self.waking_model.anomaly_series(z_threshold=z_threshold)
-        df["interpretation"] = df["anomaly_direction"].map(
-            {
-                "elevated": "HR elevated for given movement — possible stress, illness, or arousal",
-                "depressed": "HR lower than expected for activity — improved fitness or bradycardia",
-                "normal": "",
-            }
-        )
+        df["interpretation"] = df["anomaly_direction"].map({
+            "elevated":  "HR elevated for given movement — possible stress, illness, or arousal",
+            "depressed": "HR lower than expected for activity — improved fitness or bradycardia",
+            "normal":    "",
+        })
         return df
 
     def analyse_sleep(self) -> pd.DataFrame:
@@ -798,19 +780,15 @@ class SignalAnomalyEngine:
         """Print a concise waking anomaly summary to stdout."""
         if df is None:
             df = self.analyse_waking()
-        total = len(df)
+        total      = len(df)
         n_elevated = int((df["anomaly_direction"] == "elevated").sum())
-        n_depress = int((df["anomaly_direction"] == "depressed").sum())
+        n_depress  = int((df["anomaly_direction"] == "depressed").sum())
         pct_e = n_elevated / total * 100
-        pct_d = n_depress / total * 100
+        pct_d = n_depress  / total * 100
         print("\n═══ Waking HR Anomaly Summary ═══")
         print(f"  Total minutes analysed : {total:,}")
-        print(
-            f"  Elevated HR anomalies  : {n_elevated:,}  ({pct_e:.1f}%) — stress / illness candidates"
-        )
-        print(
-            f"  Depressed HR anomalies : {n_depress:,}  ({pct_d:.1f}%) — fitness / medication candidates"
-        )
+        print(f"  Elevated HR anomalies  : {n_elevated:,}  ({pct_e:.1f}%) — stress / illness candidates")
+        print(f"  Depressed HR anomalies : {n_depress:,}  ({pct_d:.1f}%) — fitness / medication candidates")
         # Top anomaly days
         df_flag = df[df["anomaly_flag"]].copy()
         if not df_flag.empty:
@@ -834,19 +812,13 @@ class SignalAnomalyEngine:
         print("\n═══ Sleep Anomaly Summary ═══")
         print(f"  Nights analysed : {len(nightly)}")
         anom_nights = nightly[nightly["overall_anomaly"]]
-        print(
-            f"  Anomalous nights: {len(anom_nights)} "
-            f"({len(anom_nights) / max(len(nightly), 1) * 100:.0f}%)"
-        )
+        print(f"  Anomalous nights: {len(anom_nights)} "
+              f"({len(anom_nights)/max(len(nightly),1)*100:.0f}%)")
         if not anom_nights.empty:
             print("\n  Most anomalous nights (>10% of minutes flagged):")
-            for date, row in (
-                anom_nights.sort_values("anomaly_pct", ascending=False).head(8).iterrows()
-            ):
-                print(
-                    f"    {date}  {row['anomaly_pct']:5.1f}% flagged  "
-                    f"(mean err {row['mean_recon_error']:.5f})"
-                )
+            for date, row in anom_nights.sort_values("anomaly_pct", ascending=False).head(8).iterrows():
+                print(f"    {date}  {row['anomaly_pct']:5.1f}% flagged  "
+                      f"(mean err {row['mean_recon_error']:.5f})")
 
     # ------------------------------------------------------------------
 
@@ -868,7 +840,7 @@ class SignalAnomalyEngine:
         """Load previously saved models."""
         sae = cls(engine, device=device)
         waking_path = Path(f"{prefix}_waking.pt")
-        sleep_path = Path(f"{prefix}_sleep.pt")
+        sleep_path  = Path(f"{prefix}_sleep.pt")
         if waking_path.exists():
             sae.waking_model = MovementHRPredictor.load(waking_path, device=device)
         if sleep_path.exists():
@@ -879,7 +851,6 @@ class SignalAnomalyEngine:
 # ──────────────────────────────────────────────────────────────────────────────
 # Utility
 # ──────────────────────────────────────────────────────────────────────────────
-
 
 def _auto_device(device: str | None) -> str:
     if device is not None:

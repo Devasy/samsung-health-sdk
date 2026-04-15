@@ -1,11 +1,7 @@
 """Metric-specific parsers."""
 
 from samsung_health_sdk.metrics.heart_rate import HeartRateMetric
-from samsung_health_sdk.metrics.sleep import (
-    SleepStageMetric,
-    SleepSessionMetric,
-    SleepRawDataMetric,
-)
+from samsung_health_sdk.metrics.sleep import SleepStageMetric, SleepSessionMetric, SleepRawDataMetric
 from samsung_health_sdk.metrics.skin_temperature import SkinTemperatureMetric
 from samsung_health_sdk.metrics.stress import StressMetric
 from samsung_health_sdk.metrics.spo2 import SpO2Metric

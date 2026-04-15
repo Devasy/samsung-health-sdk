@@ -18,7 +18,6 @@ Both datasets expose a ``metadata`` DataFrame that maps each sample index to
 its source timestamps, enabling anomaly results to be plotted back on the
 original time axis.
 """
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -35,7 +34,6 @@ if TYPE_CHECKING:
 # ──────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ──────────────────────────────────────────────────────────────────────────────
-
 
 def _norm_series(s: pd.Series) -> tuple[pd.Series, float, float]:
     """Min-max normalise a series.  Returns (normed, min_val, max_val)."""
@@ -55,7 +53,6 @@ def _build_minute_grid(
 # ──────────────────────────────────────────────────────────────────────────────
 # 1.  Waking HR ↔ Movement dataset
 # ──────────────────────────────────────────────────────────────────────────────
-
 
 class MinuteLevelDataset(Dataset):
     """
@@ -123,21 +120,19 @@ class MinuteLevelDataset(Dataset):
 
         # Build windows
         indices = range(0, len(X_all) - window_size + 1, stride)
-        self._X = np.stack([X_all[i : i + window_size] for i in indices])
-        self._y = np.stack([y_all[i : i + window_size] for i in indices])
-        self._ts = [ts_all[i : i + window_size] for i in indices]
+        self._X   = np.stack([X_all[i: i + window_size] for i in indices])
+        self._y   = np.stack([y_all[i: i + window_size] for i in indices])
+        self._ts  = [ts_all[i: i + window_size] for i in indices]
 
         # Metadata for mapping predictions back to timestamps
-        self.metadata = pd.DataFrame(
-            {
-                "sample_idx": range(len(indices)),
-                "start_time": [t[0] for t in self._ts],
-                "end_time": [t[-1] for t in self._ts],
-            }
-        )
+        self.metadata = pd.DataFrame({
+            "sample_idx": range(len(indices)),
+            "start_time": [t[0] for t in self._ts],
+            "end_time":   [t[-1] for t in self._ts],
+        })
         self.input_cols = input_cols
         self.n_input_features = len(input_cols)
-        self._raw_joint = joint  # keep for residual analysis
+        self._raw_joint = joint   # keep for residual analysis
 
     def __len__(self) -> int:
         return len(self._X)
@@ -195,7 +190,7 @@ def _load_waking_joint(
     joint = joint[(joint["heart_rate"] >= 30) & (joint["heart_rate"] <= 220)]
     joint = joint[(joint["activity_level"] >= 0)]
 
-    if exclude_sleep and hasattr(engine, "_p"):
+    if exclude_sleep and hasattr(engine, '_p'):
         try:
             sleep_stages = p.get_sleep()
             if not sleep_stages.empty:
@@ -260,16 +255,16 @@ class SleepWindowDataset(Dataset):
         self._minute_df = minute_df
 
         # Build windows across all sleep sessions
-        windows_X: list[np.ndarray] = []
+        windows_X:  list[np.ndarray] = []
         windows_ts: list[np.ndarray] = []
         windows_night: list[str] = []
 
         for night_date, session_df in minute_df.groupby("night_date"):
             arr = session_df[self.signal_cols].values.astype(np.float32)
-            ts = session_df.index.values
-            n = len(arr)
+            ts  = session_df.index.values
+            n   = len(arr)
             for i in range(0, n - window_size + 1, stride):
-                patch = arr[i : i + window_size]
+                patch = arr[i: i + window_size]
                 # Require at least min_signals columns to have data (not all NaN)
                 valid_cols = np.sum(~np.isnan(patch).all(axis=0))
                 if valid_cols < min_signals:
@@ -280,7 +275,7 @@ class SleepWindowDataset(Dataset):
                     nan_mask = np.isnan(patch[:, j])
                     patch[nan_mask, j] = col_means[j] if not np.isnan(col_means[j]) else 0.5
                 windows_X.append(patch)
-                windows_ts.append(ts[i : i + window_size])
+                windows_ts.append(ts[i: i + window_size])
                 windows_night.append(str(night_date))
 
         if not windows_X:
@@ -289,26 +284,24 @@ class SleepWindowDataset(Dataset):
                 "Check that sleep stage boundaries and HR data overlap."
             )
 
-        self._X = np.stack(windows_X)  # (N, W, C)
+        self._X = np.stack(windows_X)        # (N, W, C)
         self._ts = windows_ts
         self._nights = windows_night
         self.n_signals = self._X.shape[2]
 
-        self.metadata = pd.DataFrame(
-            {
-                "sample_idx": range(len(windows_X)),
-                "night_date": windows_night,
-                "start_time": [t[0] for t in windows_ts],
-                "end_time": [t[-1] for t in windows_ts],
-            }
-        )
+        self.metadata = pd.DataFrame({
+            "sample_idx": range(len(windows_X)),
+            "night_date": windows_night,
+            "start_time": [t[0] for t in windows_ts],
+            "end_time":   [t[-1] for t in windows_ts],
+        })
 
     def __len__(self) -> int:
         return len(self._X)
 
     def __getitem__(self, idx: int):
         x = torch.from_numpy(self._X[idx])
-        return x, x  # autoencoder: target = input
+        return x, x   # autoencoder: target = input
 
     def get_minute_df(self) -> pd.DataFrame:
         """Return the full minute-level sleep DataFrame (all sessions)."""
@@ -316,7 +309,7 @@ class SleepWindowDataset(Dataset):
 
     def per_minute_errors(
         self,
-        recon_errors: np.ndarray,  # (N, window_size) per-step reconstruction error
+        recon_errors: np.ndarray,    # (N, window_size) per-step reconstruction error
     ) -> pd.Series:
         """
         Aggregate per-window, per-step reconstruction errors back to a
@@ -396,9 +389,7 @@ def _load_sleep_signals(
     try:
         rr_raw = p.get_respiratory_rate(granularity="detail")
         if not rr_raw.empty:
-            rr_col = (
-                "respiratory_rate" if "respiratory_rate" in rr_raw.columns else rr_raw.columns[-1]
-            )
+            rr_col = "respiratory_rate" if "respiratory_rate" in rr_raw.columns else rr_raw.columns[-1]
             rr_raw = rr_raw[["start_time", rr_col]].copy()
             rr_raw[rr_col] = pd.to_numeric(rr_raw[rr_col], errors="coerce")
             rr_raw = rr_raw.dropna()
@@ -424,7 +415,7 @@ def _load_sleep_signals(
 
     # ── Filter to sleep session windows only ──────────────────────────
     sleep_mask = pd.Series(False, index=combined.index)
-    night_col = pd.Series(pd.NaT, index=combined.index, dtype="object")
+    night_col  = pd.Series(pd.NaT, index=combined.index, dtype="object")
 
     for _, row in sleep.iterrows():
         mask = (combined.index >= row["start_time"]) & (combined.index <= row["end_time"])

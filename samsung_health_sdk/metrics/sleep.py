@@ -26,15 +26,8 @@ class SleepStageMetric(BaseMetric):
     """
 
     metric_name = "com.samsung.health.sleep_stage"
-    value_columns = [
-        "start_time",
-        "end_time",
-        "stage",
-        "sleep_id",
-        "datauuid",
-        "deviceuuid",
-        "time_offset",
-    ]
+    value_columns = ["start_time", "end_time", "stage", "sleep_id",
+                     "datauuid", "deviceuuid", "time_offset"]
 
     def load_summary(self, start: DateLike = None, end: DateLike = None) -> pd.DataFrame:
         df = super().load_summary(start, end)

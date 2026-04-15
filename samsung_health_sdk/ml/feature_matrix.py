@@ -16,7 +16,6 @@ Typical usage::
     df  = build_daily_features(eng)
     print(df.tail())
 """
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -30,32 +29,17 @@ if TYPE_CHECKING:
 # Canonical feature columns output by build_daily_features()
 FEATURE_COLS: list[str] = [
     # Sleep quality
-    "sleep_quality_score",
-    "efficiency_pct",
-    "deep_min",
-    "rem_min",
-    "sleep_light_min",
-    "awake_min",
-    "total_h",
-    "fragmentation_index",
+    "sleep_quality_score", "efficiency_pct", "deep_min", "rem_min",
+    "sleep_light_min", "awake_min", "total_h", "fragmentation_index",
     # HRV
-    "rmssd_mean",
-    "hrv_readiness_score",
-    "hrv_deviation_pct",
+    "rmssd_mean", "hrv_readiness_score", "hrv_deviation_pct",
     # Stress
-    "mean_stress",
-    "stress_deviation_pct",
+    "mean_stress", "stress_deviation_pct",
     # Activity intensity (minutes per bucket)
-    "sedentary_min",
-    "light_activity_min",
-    "low_mod_min",
-    "moderate_min",
-    "vigorous_min",
-    "active_min",
-    "mean_hr_active",
+    "sedentary_min", "light_activity_min", "low_mod_min",
+    "moderate_min", "vigorous_min", "active_min", "mean_hr_active",
     # Nightly physiology
-    "rr_mean",
-    "restlessness_score",
+    "rr_mean", "restlessness_score",
     # Cardiac fitness proxy
     "cardiac_load",
 ]
@@ -137,7 +121,7 @@ def build_daily_features(engine: "HealthFeatureEngine") -> pd.DataFrame:
         if not act.empty:
             keep = {
                 "sedentary_min": "sedentary_min",
-                "light_min": "light_activity_min",  # rename to avoid clash with sleep_light_min
+                "light_min": "light_activity_min",   # rename to avoid clash with sleep_light_min
                 "low_mod_min": "low_mod_min",
                 "moderate_min": "moderate_min",
                 "vigorous_min": "vigorous_min",
@@ -210,8 +194,8 @@ def build_daily_features(engine: "HealthFeatureEngine") -> pd.DataFrame:
     # Clip to [-20, 50] then map to a 0–1 penalty: 0 = low stress, 1 = high.
     stress_penalty = ((sd.clip(-20, 50) + 20) / 70.0) * 100.0  # 0–100
 
-    merged["energy_index"] = (0.45 * s_filled + 0.35 * h_filled - 0.20 * stress_penalty).clip(
-        0, 100
-    )
+    merged["energy_index"] = (
+        0.45 * s_filled + 0.35 * h_filled - 0.20 * stress_penalty
+    ).clip(0, 100)
 
     return merged

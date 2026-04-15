@@ -16,15 +16,8 @@ class SpO2Metric(BaseMetric):
     """
 
     metric_name = "com.samsung.shealth.tracker.oxygen_saturation"
-    value_columns = [
-        "start_time",
-        "end_time",
-        "spo2",
-        "heart_rate",
-        "datauuid",
-        "deviceuuid",
-        "time_offset",
-    ]
+    value_columns = ["start_time", "end_time", "spo2", "heart_rate",
+                     "datauuid", "deviceuuid", "time_offset"]
 
     def load_summary(self, start: DateLike = None, end: DateLike = None) -> pd.DataFrame:
         df = super().load_summary(start, end)

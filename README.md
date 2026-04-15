@@ -203,12 +203,5 @@ Per-minute accelerometer intensity from `get_movement()`:
 git clone https://github.com/Devasy/samsung-health-sdk
 cd samsung-health-sdk
 pip install -e ".[dev]"
-pre-commit install
 pytest
-```
-
-Run linting/format hooks on demand:
-
-```bash
-pre-commit run --all-files
 ```
